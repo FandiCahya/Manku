@@ -1,0 +1,305 @@
+{
+  "info": {
+    "name": "ManKu API",
+    "_postman_id": "manku-api-collection",
+    "description": "Koleksi API ManKu — Auth & Transaction\n\nCARA PAKAI:\n1. Import file ini ke Postman\n2. Import juga file ManKu_ENV.postman_environment.json\n3. Pilih environment 'ManKu Local' di pojok kanan atas\n4. Jalankan '01 Login' terlebih dahulu — token akan tersimpan otomatis\n5. Semua request lain sudah otomatis pakai token tersebut",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [],
+  "item": [
+    {
+      "name": "🔐 AUTH",
+      "item": [
+        {
+          "name": "01 Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/register/", "host": ["{{base_url}}"], "path": ["api","auth","register",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Fandi\",\n    \"email\": \"fandi@example.com\",\n    \"password\": \"Password123!\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/verify-otp/", "host": ["{{base_url}}"], "path": ["api","auth","verify-otp",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"fandi@example.com\",\n    \"code\": \"123456\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Login ✅ (auto-save token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && json.tokens) {",
+                  "    pm.environment.set('access_token',  json.tokens.access);",
+                  "    pm.environment.set('refresh_token', json.tokens.refresh);",
+                  "    pm.environment.set('user_id',       json.user.id);",
+                  "    console.log('✅ Token tersimpan untuk user:', json.user.name);",
+                  "} else {",
+                  "    console.error('❌ Login gagal:', json.message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/login/", "host": ["{{base_url}}"], "path": ["api","auth","login",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"fandimugiwara93@gmail.com\",\n    \"password\": \"Password123!\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Google Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/google-login/", "host": ["{{base_url}}"], "path": ["api","auth","google-login",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id_token\": \"PASTE_TOKEN_DARI_HALAMAN_TEST_DISINI\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📂 CATEGORY",
+      "item": [
+        {
+          "name": "01 List Kategori",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/categories/", "host": ["{{base_url}}"], "path": ["api","categories",""] }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Buat Kategori Baru",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/categories/", "host": ["{{base_url}}"], "path": ["api","categories",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Makanan\",\n    \"type\": \"expense\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Update Kategori",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/categories/{{category_id}}/", "host": ["{{base_url}}"], "path": ["api","categories","{{category_id}}",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Makanan & Minuman\",\n    \"type\": \"expense\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Hapus Kategori",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/categories/{{category_id}}/", "host": ["{{base_url}}"], "path": ["api","categories","{{category_id}}",""] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "💰 TRANSACTION",
+      "item": [
+        {
+          "name": "01 List Transaksi",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/transactions/", "host": ["{{base_url}}"], "path": ["api","transactions",""] }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Detail Transaksi",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/transactions/{{transaction_id}}/", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}",""] }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Tambah Transaksi Manual",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/transactions/save-transaction/", "host": ["{{base_url}}"], "path": ["api","transactions","save-transaction",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 25000,\n    \"description\": \"Beli nasi goreng\",\n    \"type\": \"expense\",\n    \"category_hint\": \"Makanan\",\n    \"date\": \"2025-01-15\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Input via Chat AI 💬",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/transactions/chat-input/", "host": ["{{base_url}}"], "path": ["api","transactions","chat-input",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"text\": \"tadi beli kopi sama roti 35000\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Scan Struk (Foto) 📸",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/transactions/scan-receipt/", "host": ["{{base_url}}"], "path": ["api","transactions","scan-receipt",""] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "receipt_image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Upload foto struk belanja (JPG/PNG)"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 Input Suara 🎙️",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/transactions/scan-voice/", "host": ["{{base_url}}"], "path": ["api","transactions","scan-voice",""] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio_file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Upload file audio (MP3/WAV/M4A)"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 Update Transaksi",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/transactions/{{transaction_id}}/", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"description\": \"Beli nasi goreng + teh manis\",\n    \"amount\": 28000\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 Hapus Transaksi",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/transactions/{{transaction_id}}/", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}",""] }
+          },
+          "response": []
+        },
+        {
+          "name": "❌ Tanpa Token (harus 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/transactions/", "host": ["{{base_url}}"], "path": ["api","transactions",""] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 BUDGET",
+      "item": [
+        {
+          "name": "01 List Budget",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/budgets/", "host": ["{{base_url}}"], "path": ["api","budgets",""] }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Buat Budget",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/budgets/", "host": ["{{base_url}}"], "path": ["api","budgets",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category\": \"{{category_id}}\",\n    \"amount\": 500000,\n    \"month_year\": \"2025-01-01\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

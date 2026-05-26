@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="id">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ManKu – Google Login Test</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: "Segoe UI", sans-serif;
+                background: #f0f2f5;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+            .card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 36px 40px;
+                width: 100%;
+                max-width: 640px;
+                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+            }
+            .logo {
+                font-size: 26px;
+                font-weight: 700;
+                color: #1a73e8;
+                margin-bottom: 2px;
+            }
+            .subtitle {
+                font-size: 13px;
+                color: #888;
+                margin-bottom: 24px;
+            }
+
+            /* info box */
+            .info-box {
+                background: #f8f9fa;
+                border-left: 4px solid #1a73e8;
+                border-radius: 0 8px 8px 0;
+                padding: 14px 18px;
+                margin-bottom: 20px;
+                font-size: 14px;
+                color: #444;
+                line-height: 1.8;
+            }
+            .info-box strong {
+                color: #1a73e8;
+            }
+
+            /* warning box — daftar redirect URI */
+            .warn-box {
+                background: #fff8e1;
+                border: 1px solid #ffe082;
+                border-radius: 10px;
+                padding: 16px 18px;
+                margin-bottom: 22px;
+            }
+            .warn-box h4 {
+                font-size: 13px;
+                font-weight: 700;
+                color: #e65100;
+                margin-bottom: 8px;
+            }
+            .warn-box p {
+                font-size: 13px;
+                color: #555;
+                margin-bottom: 6px;
+            }
+            .uri-code {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: #fff3e0;
+                border-radius: 6px;
+                padding: 9px 12px;
+            }
+            .uri-code code {
+                flex: 1;
+                font-size: 12px;
+                color: #e65100;
+                font-family: monospace;
+                word-break: break-all;
+            }
+            .btn-copy-uri {
+                background: #1a73e8;
+                color: #fff;
+                border: none;
+                border-radius: 6px;
+                padding: 5px 12px;
+                font-size: 12px;
+                cursor: pointer;
+                white-space: nowrap;
+                font-weight: 600;
+            }
+            .btn-copy-uri:hover {
+                opacity: 0.85;
+            }
+
+            /* sign-in area */
+            #signin-area {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 14px;
+                margin: 20px 0 24px;
+            }
+            #hint {
+                font-size: 13px;
+                color: #888;
+                text-align: center;
+            }
+
+            /* error */
+            .err-box {
+                background: #fce8e6;
+                border: 1px solid #f28b82;
+                border-radius: 8px;
+                padding: 14px 18px;
+                font-size: 13px;
+                color: #c62828;
+                line-height: 1.6;
+                display: none;
+                margin-bottom: 18px;
+            }
+
+            /* postman guide */
+            .pm-box {
+                background: #e8f5e9;
+                border: 1px solid #a5d6a7;
+                border-radius: 10px;
+                padding: 16px 20px;
+            }
+            .pm-box h3 {
+                font-size: 14px;
+                color: #2e7d32;
+                margin-bottom: 10px;
+            }
+            .pm-box p {
+                font-size: 13px;
+                color: #555;
+                margin-bottom: 4px;
+            }
+            .pm-box code {
+                display: block;
+                background: #f1f8e9;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-size: 12px;
+                color: #33691e;
+                margin: 3px 0 10px;
+            }
+            .pill {
+                display: inline-block;
+                background: #e8f0fe;
+                color: #1a73e8;
+                border-radius: 4px;
+                padding: 0 7px;
+                font-size: 12px;
+                font-family: monospace;
+            }
+
+            /* toast */
+            #toast {
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #323232;
+                color: #fff;
+                padding: 10px 24px;
+                border-radius: 24px;
+                font-size: 14px;
+                opacity: 0;
+                transition: opacity 0.3s;
+                pointer-events: none;
+                z-index: 9999;
+            }
+            #toast.show {
+                opacity: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="logo">ManKu</div>
+            <div class="subtitle">
+                Google Login — Token Tester untuk Postman
+            </div>
+
+            <!-- ⚠️ Panduan setup Google Cloud Console — tampilkan URL yang HARUS didaftarkan -->
+            <div class="warn-box">
+                <h4>
+                    ⚠️ Sebelum klik Sign-In: Pastikan URL ini sudah didaftarkan
+                    di Google Cloud Console
+                </h4>
+                <p>
+                    Buka
+                    <b
+                        >Google Cloud Console → Credentials → OAuth 2.0 Client
+                        ID kamu</b
+                    >
+                    →<br />
+                    Bagian <b>"Authorized redirect URIs"</b> → klik
+                    <b>+ ADD URI</b> → paste URL di bawah ini:
+                </p>
+                <div class="uri-code">
+                    <code id="redirect-uri-display">{{ callback_url }}</code>
+                    <button class="btn-copy-uri" onclick="copyUri()">
+                        Copy
+                    </button>
+                </div>
+                <p style="margin-top: 10px; font-size: 12px; color: #888">
+                    Setelah Save di Google Cloud Console, tunggu 1–2 menit lalu
+                    refresh halaman ini.
+                </p>
+            </div>
+
+            <!-- Cara pakai -->
+            <div class="info-box">
+                <strong>Cara pakai:</strong><br />
+                1. Pastikan URL di atas sudah didaftarkan di Google Cloud
+                Console<br />
+                2. Klik tombol <b>Sign in with Google</b> di bawah<br />
+                3. Pilih akun Google — halaman akan redirect ke Google lalu
+                kembali<br />
+                4. Token otomatis tampil → klik <b>📋 Copy Token</b> → paste ke
+                Postman di field <span class="pill">id_token</span>
+            </div>
+
+            <div class="err-box" id="err-box">
+                <strong>⚠️ Error:</strong> <span id="err-msg"></span>
+            </div>
+
+            <div id="signin-area">
+                <div id="google-btn"></div>
+                <div id="hint">Klik tombol untuk Sign in dengan Google</div>
+            </div>
+
+            <div class="pm-box">
+                <h3>✅ Cara test di Postman setelah dapat token</h3>
+                <p><b>Method &amp; URL:</b></p>
+                <code>POST http://127.0.0.1:8000/api/auth/google-login/</code>
+                <p><b>Header:</b></p>
+                <code>Content-Type: application/json</code>
+                <p><b>Body (raw → JSON):</b></p>
+                <code>{ "id_token": "PASTE_TOKEN_DI_SINI" }</code>
+            </div>
+        </div>
+
+        <div id="toast">Dicopy! 🎉</div>
+
+        <script src="https://accounts.google.com/gsi/client" async></script>
+        <script>
+            // Nilai dari Django — sudah pasti akurat, tidak dinamis dari JS
+            var CLIENT_ID = "{{ google_client_id }}";
+            var CALLBACK_URL = "{{ callback_url }}"; // ← dari request.build_absolute_uri()
+
+            window.onload = function () {
+                if (!CLIENT_ID) {
+                    showErr(
+                        "GOOGLE_CLIENT_ID belum dikonfigurasi. Periksa file .env",
+                    );
+                    return;
+                }
+                waitForGoogle(0);
+            };
+
+            function waitForGoogle(n) {
+                if (n > 30) {
+                    showErr(
+                        "Gagal memuat library Google Sign-In. Cek koneksi internet lalu refresh.",
+                    );
+                    return;
+                }
+                if (typeof google === "undefined" || !google.accounts) {
+                    setTimeout(function () {
+                        waitForGoogle(n + 1);
+                    }, 300);
+                    return;
+                }
+                initBtn();
+            }
+
+            function initBtn() {
+                try {
+                    google.accounts.id.initialize({
+                        client_id: CLIENT_ID,
+                        ux_mode: "redirect", // tidak pakai popup — tidak ada postMessage error
+                        login_uri: CALLBACK_URL, // URL yang sama persis dengan yang didaftarkan di GCC
+                    });
+                    google.accounts.id.renderButton(
+                        document.getElementById("google-btn"),
+                        {
+                            type: "standard",
+                            theme: "outline",
+                            size: "large",
+                            text: "signin_with",
+                            shape: "rectangular",
+                            logo_alignment: "left",
+                            width: 280,
+                        },
+                    );
+                    document.getElementById("hint").textContent =
+                        "Klik tombol — halaman akan redirect ke Google lalu kembali otomatis";
+                } catch (e) {
+                    showErr("Inisialisasi Google Sign-In gagal: " + e.message);
+                }
+            }
+
+            function copyUri() {
+                var uri = document
+                    .getElementById("redirect-uri-display")
+                    .textContent.trim();
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(uri).then(showToast);
+                } else {
+                    var ta = document.createElement("textarea");
+                    ta.value = uri;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(ta);
+                    showToast();
+                }
+            }
+
+            function showErr(msg) {
+                document.getElementById("err-msg").textContent = msg;
+                document.getElementById("err-box").style.display = "block";
+                console.error("[ManKu]", msg);
+            }
+
+            function showToast() {
+                var t = document.getElementById("toast");
+                t.classList.add("show");
+                setTimeout(function () {
+                    t.classList.remove("show");
+                }, 2000);
+            }
+        </script>
+    </body>
+</html>

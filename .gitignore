@@ -1,0 +1,14 @@
+# Virtual Environments
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Database Lokal (agar data ujicoba tidak ikut ter-push)
+db.sqlite3
+
+# Windows temporary files
+Thumbs.db

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ManKu – Token Diterima</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Segoe UI',sans-serif;background:#f0f2f5;
+      min-height:100vh;display:flex;align-items:center;
+      justify-content:center;padding:20px;
+    }
+    .card{
+      background:#fff;border-radius:16px;padding:36px 40px;
+      width:100%;max-width:640px;
+      box-shadow:0 4px 24px rgba(0,0,0,.10);
+    }
+    .logo{font-size:26px;font-weight:700;color:#1a73e8;margin-bottom:2px}
+    .subtitle{font-size:13px;color:#888;margin-bottom:24px}
+
+    /* ── user bar ── */
+    .user-bar{
+      display:flex;align-items:center;gap:12px;
+      background:#e8f0fe;border-radius:10px;
+      padding:12px 16px;margin-bottom:24px;
+    }
+    .user-bar img{width:44px;height:44px;border-radius:50%}
+    .user-bar .name{font-weight:600;font-size:15px;color:#222}
+    .user-bar .email{font-size:13px;color:#555}
+    .user-bar .badge{
+      margin-left:auto;background:#e6f4ea;color:#34a853;
+      font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;
+    }
+
+    /* ── token area ── */
+    .token-label{
+      font-size:14px;font-weight:600;color:#333;margin-bottom:8px;
+    }
+    textarea{
+      width:100%;height:160px;
+      border:1.5px solid #ddd;border-radius:8px;
+      padding:12px;font-size:11px;font-family:monospace;
+      color:#333;background:#fafafa;resize:vertical;
+    }
+    .btn-row{display:flex;gap:10px;margin-top:12px;margin-bottom:28px}
+    button{
+      padding:10px 22px;border:none;border-radius:8px;
+      font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s;
+    }
+    button:hover{opacity:.85}
+    .btn-copy {background:#1a73e8;color:#fff}
+    .btn-back {background:#f1f3f4;color:#444}
+
+    /* ── postman guide ── */
+    .pm-box{
+      background:#fff8e1;border:1px solid #ffe082;
+      border-radius:10px;padding:16px 20px;
+    }
+    .pm-box h3{font-size:14px;color:#f57c00;margin-bottom:10px}
+    .pm-box p {font-size:13px;color:#555;margin-bottom:4px}
+    .pm-box code{
+      display:block;background:#fff3e0;border-radius:6px;
+      padding:8px 12px;font-size:12px;color:#e65100;margin:3px 0 10px;
+    }
+
+    /* ── error ── */
+    .err{
+      background:#fce8e6;border:1px solid #f28b82;border-radius:8px;
+      padding:16px 18px;font-size:14px;color:#c62828;text-align:center;
+    }
+
+    /* ── toast ── */
+    #toast{
+      position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+      background:#323232;color:#fff;padding:10px 24px;
+      border-radius:24px;font-size:14px;opacity:0;
+      transition:opacity .3s;pointer-events:none;z-index:9999;
+    }
+    #toast.show{opacity:1}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">ManKu</div>
+  <div class="subtitle">Google Login — Token Tester untuk Postman</div>
+
+  {% if credential %}
+
+    <!-- User info bar -->
+    <div class="user-bar" id="user-bar">
+      <img id="avatar" src="" alt="avatar" style="display:none"/>
+      <div>
+        <div class="name"  id="uname">-</div>
+        <div class="email" id="uemail">-</div>
+      </div>
+      <span class="badge">✅ Login Berhasil</span>
+    </div>
+
+    <!-- Token -->
+    <div class="token-label">id_token — copy dan paste ke Postman:</div>
+    <textarea id="tok" readonly>{{ credential }}</textarea>
+    <div class="btn-row">
+      <button class="btn-copy" onclick="copyTok()">📋 Copy Token</button>
+      <a href="/api/auth/google-token-test/"><button class="btn-back" type="button">🔄 Login Ulang</button></a>
+    </div>
+
+    <!-- Panduan Postman -->
+    <div class="pm-box">
+      <h3>🔧 Cara test di Postman</h3>
+      <p><b>Method &amp; URL:</b></p>
+      <code>POST  http://127.0.0.1:8000/api/auth/google-login/</code>
+      <p><b>Header:</b></p>
+      <code>Content-Type: application/json</code>
+      <p><b>Body (raw → JSON):</b></p>
+      <code>{ "id_token": "PASTE_TOKEN_DI_SINI" }</code>
+      <p style="color:#999;font-size:12px;margin-top:6px">
+        ⏰ Token berlaku ~1 jam. Klik "Login Ulang" jika expired.
+      </p>
+    </div>
+
+  {% else %}
+
+    <div class="err">
+      ⚠️ Tidak ada token yang diterima dari Google.<br>
+      <a href="/api/auth/google-token-test/">← Kembali dan coba lagi</a>
+    </div>
+
+  {% endif %}
+</div>
+
+<div id="toast">Token berhasil dicopy! 🎉</div>
+
+<script>
+  // Decode JWT payload untuk tampilan user info
+  function parseJwt(t) {
+    try {
+      var b = t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+      return JSON.parse(decodeURIComponent(
+        atob(b).split('').map(function(c){
+          return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')
+      ));
+    } catch(e){ return {}; }
+  }
+
+  var tok = document.getElementById('tok');
+  if (tok && tok.value) {
+    var p = parseJwt(tok.value);
+    if (p.name)    document.getElementById('uname').textContent  = p.name;
+    if (p.email)   document.getElementById('uemail').textContent = p.email;
+    if (p.picture) {
+      var av = document.getElementById('avatar');
+      av.src = p.picture;
+      av.style.display = 'block';
+    }
+  }
+
+  function copyTok() {
+    var ta = document.getElementById('tok');
+    if (!ta || !ta.value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(toast).catch(function(){ fb(ta); });
+    } else { fb(ta); }
+  }
+  function fb(ta) {
+    ta.select(); ta.setSelectionRange(0,99999);
+    document.execCommand('copy'); toast();
+  }
+  function toast() {
+    var t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2500);
+  }
+</script>
+</body>
+</html>
