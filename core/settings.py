@@ -43,6 +43,7 @@ ALLOWED_HOSTS = [
     "10.0.2.2",  # Android Emulator mengakses host lewat IP ini
     "192.168.0.160",  # IP WiFi komputer — untuk device fisik
     "192.168.0.160:8000",
+    "151.145.68.195",
 ]
 
 
@@ -96,14 +97,15 @@ WSGI_APPLICATION = "core.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "finance_app",
-        "USER": "postgres",
-        "PASSWORD": "rahasia",
-        "HOST": "127.0.0.1",
-        "PORT": "5432",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
