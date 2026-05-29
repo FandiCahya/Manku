@@ -949,6 +949,128 @@ class BudgetGoalViewSet(viewsets.ViewSet):
             "goals": goals_data,
         }, status=status.HTTP_200_OK)
 
+    # -------------------------------------------------------------------------
+    # GET /api/budget-goals/financial-advice/
+    # Dapatkan saran pengelolaan keuangan berbasis AI menggunakan Groq
+    # -------------------------------------------------------------------------
+    @action(detail=False, methods=["get"], url_path="financial-advice")
+    def financial_advice(self, request):
+        user = request.user
+        now = timezone.localtime()
+        today = now.date()
+        first_of_month = today.replace(day=1)
+
+        # 1. Ambil data budget bulan ini
+        budgets = Budget.objects.filter(
+            user=user, month_year=first_of_month
+        ).select_related("category")
+
+        total_budget = Decimal("0")
+        budget_details = []
+
+        for budget in budgets:
+            spent = Transaction.objects.filter(
+                user=user,
+                category=budget.category,
+                transaction_date__date__gte=first_of_month,
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+            
+            total_budget += budget.amount
+            budget_details.append(
+                f"- {budget.category.name}: Budget Rp {budget.amount:,.0f}, Terpakai Rp {spent:,.0f}"
+            )
+
+        # 2. Hitung income dan expense bulan ini
+        monthly_income = Transaction.objects.filter(
+            user=user,
+            category__type="income",
+            transaction_date__date__gte=first_of_month,
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+        monthly_expense = Transaction.objects.filter(
+            user=user,
+            category__type="expense",
+            transaction_date__date__gte=first_of_month,
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+        budget_details_str = "\n".join(budget_details) if budget_details else "- Belum ada anggaran yang diatur."
+
+        # 3. Bangun prompt untuk Groq LLM
+        prompt = f"""
+        Kamu adalah perencana keuangan pribadi (financial advisor) pintar dan ramah bernama ManKu Advisor.
+        Tugasmu adalah menganalisis anggaran (budget) dan pengeluaran pengguna untuk bulan ini, lalu memberikan rekomendasi/saran keuangan yang dipersonalisasi dan sangat berguna dalam Bahasa Indonesia yang ramah, profesional, dan memotivasi.
+
+        Data Keuangan Pengguna Bulan Ini ({first_of_month.strftime('%B %Y')}):
+        - Total Pemasukan Aktual: Rp {monthly_income:,.0f}
+        - Total Anggaran Belanja (Budget): Rp {total_budget:,.0f}
+        - Total Pengeluaran Aktual: Rp {monthly_expense:,.0f}
+
+        Daftar Anggaran per Kategori:
+        {budget_details_str}
+
+        Berikan respon Anda dalam format JSON murni tanpa markdown (JANGAN gunakan pembungkus ```json atau penanda blok kode lainnya).
+        Struktur JSON wajib memiliki field-field berikut:
+        {{
+            "status_keuangan": "<Status singkat keuangan, misal: Sangat Baik, Sehat, Butuh Penyesuaian, Kritis, atau Belum Mengatur Anggaran>",
+            "ringkasan_analisis": "<Analisis ringkas 2-3 kalimat mengenai alokasi anggaran dan pengeluaran pengguna. Berikan evaluasi apakah pengeluaran terkendali.>",
+            "saran_list": [
+                "<Saran konkret 1, misalnya tentang alokasi dana darurat atau pentingnya menabung.>",
+                "<Saran konkret 2, misalnya mengenai pemangkasan pengeluaran pada kategori yang melebihi budget.>",
+                "<Saran konkret 3, misalnya memberikan alternatif berhemat atau holiday budgeting.>"
+            ],
+            "tips_tambahan": "<Satu tips praktis tambahan berharga yang memotivasi pengguna untuk disiplin mencatat keuangan.>"
+        }}
+        """
+
+        try:
+            # 4. Kirim ke Groq API
+            response = client.chat.completions.create(
+                model=TEXT_MODEL,
+                max_tokens=800,
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            # 5. Ekstrak dan bersihkan respon
+            ai_text = response.choices[0].message.content.strip()
+            if ai_text.startswith("```json"):
+                ai_text = ai_text[7:-3]
+            elif ai_text.startswith("```"):
+                ai_text = ai_text[3:-3]
+            ai_text = ai_text.strip()
+
+            # Parse JSON
+            advice_data = json.loads(ai_text)
+            return Response(advice_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            # Fallback jika terjadi error API/parsing
+            status_keuangan = "Butuh Penyesuaian" if total_budget > 0 else "Belum Mengatur Anggaran"
+            
+            if total_budget == 0:
+                ringkasan = "Anda belum mengatur anggaran untuk bulan ini. Membuat rencana anggaran adalah langkah awal yang sangat penting untuk mencapai kebebasan finansial."
+                saran = [
+                    "Buatlah budget pertama Anda dengan menekan tombol 'Set Budget' di atas untuk kategori dasar seperti Makanan atau Kebutuhan Harian.",
+                    "Gunakan aturan 50/30/20: 50% untuk kebutuhan, 30% untuk keinginan, dan 20% untuk tabungan/investasi.",
+                    "Catat setiap pengeluaran sekecil apa pun untuk memahami ke mana perginya uang Anda."
+                ]
+                tips = "Disiplin kecil hari ini akan berbuah kebebasan finansial di masa depan!"
+            else:
+                ringkasan = "Anggaran Anda sudah diatur dengan baik. Mari kita evaluasi pengeluaran Anda agar tetap seimbang dengan pemasukan bulan ini."
+                saran = [
+                    "Pantau kategori budget yang memiliki peringatan mendekati batas agar tidak melebihi alokasi.",
+                    "Prioritaskan pengeluaran wajib terlebih dahulu sebelum dialokasikan ke keinginan/hiburan.",
+                    "Jika ada sisa anggaran di akhir bulan, alokasikan langsung ke tabungan atau dana darurat."
+                ]
+                tips = "Anggaran bukanlah pembatasan, melainkan panduan agar Anda bisa membelanjakan uang tanpa rasa bersalah!"
+
+            return Response({
+                "status_keuangan": status_keuangan,
+                "ringkasan_analisis": ringkasan,
+                "saran_list": saran,
+                "tips_tambahan": tips,
+                "debug_error": str(e)
+            }, status=status.HTTP_200_OK)
+
 
 # Helper untuk F expression
 from django.db import models as django_models
