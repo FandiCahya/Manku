@@ -38,6 +38,7 @@ SECRET_KEY = "django-insecure-3&$i-_myw(5_stq--0#vradg-@_ij899h2&6)&^(twzc6q8l^i
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    "151.145.68.195.nip.io",
     "127.0.0.1",
     "localhost",
     "10.0.2.2",  # Android Emulator mengakses host lewat IP ini
