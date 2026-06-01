@@ -72,7 +72,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
         # Cari atau buat kategori milik user ini
         category, _ = Category.objects.get_or_create(
-            user=user, name=category_hint, defaults={"type": type_}
+            user=user, name=category_hint, type=type_
         )
 
         txn = Transaction.objects.create(
@@ -318,7 +318,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
             # 1. Cari atau buat kategori otomatis berdasarkan tebakan AI
             category, created = Category.objects.get_or_create(
-                user=user, name=category_hint, defaults={"type": type_}
+                user=user, name=category_hint, type=type_
             )
 
             # 2. Simpan Transaksi
@@ -580,7 +580,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
             
         if category_hint:
             category, _ = Category.objects.get_or_create(
-                user=request.user, name=category_hint, defaults={"type": type_}
+                user=request.user, name=category_hint, type=type_
             )
             txn.category = category
             
