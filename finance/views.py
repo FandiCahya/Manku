@@ -586,10 +586,17 @@ class TransactionViewSet(viewsets.ModelViewSet):
             txn.description = description
 
         if category_hint:
-            # get_or_create berdasarkan nama + tipe agar income<->expense bisa berubah
-            category, _ = Category.objects.get_or_create(
-                user=request.user, name=category_hint, type=type_
-            )
+            # Cari kategori berdasarkan nama — jika ada, update type-nya sesuai request
+            # Ini agar kategori "Income" yang salah type bisa dikoreksi otomatis
+            try:
+                category = Category.objects.get(user=request.user, name=category_hint)
+                if category.type != type_:
+                    category.type = type_
+                    category.save()
+            except Category.DoesNotExist:
+                category = Category.objects.create(
+                    user=request.user, name=category_hint, type=type_
+                )
             txn.category = category
 
         # Update transaction_date — gabungkan tanggal dan waktu
@@ -599,8 +606,9 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
         if date_str or time_str:
             naive_dt = datetime.combine(new_date, new_time)
-            # Simpan dengan timezone yang sama seperti sebelumnya
-            txn.transaction_date = timezone.make_aware(naive_dt, current_dt.tzinfo)
+            # Gunakan timezone lokal Django (TIME_ZONE di settings.py)
+            local_tz = timezone.get_current_timezone()
+            txn.transaction_date = timezone.make_aware(naive_dt, local_tz)
 
         txn.save()
 
