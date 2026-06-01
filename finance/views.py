@@ -4,7 +4,7 @@ from io import BytesIO
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
 from groq import Groq
 from PIL import Image
@@ -561,6 +561,62 @@ class TransactionViewSet(viewsets.ModelViewSet):
             "performance_max_amount": max_amount,
         }, status=status.HTTP_200_OK)
 
+    # =========================================================================
+    # ENDPOINT: PUT/PATCH /api/transactions/{id}/update/
+    # Update manual transaction
+    # =========================================================================
+    @action(detail=True, methods=["put", "patch"], url_path="update")
+    def update_transaction(self, request, pk=None):
+        txn = self.get_object()
+        
+        amount = request.data.get("amount")
+        description = request.data.get("description", txn.description)
+        type_ = request.data.get("type", txn.category.type if txn.category else "expense")
+        category_hint = request.data.get("category_hint")
+        date_str = request.data.get("date")
+        
+        if amount is not None:
+            txn.amount = amount
+            
+        if category_hint:
+            category, _ = Category.objects.get_or_create(
+                user=request.user, name=category_hint, defaults={"type": type_}
+            )
+            txn.category = category
+            
+        if description is not None:
+            txn.description = description
+            
+        if date_str:
+            from django.utils.dateparse import parse_date
+            parsed_date = parse_date(date_str)
+            if parsed_date:
+                txn.transaction_date = txn.transaction_date.replace(
+                    year=parsed_date.year,
+                    month=parsed_date.month,
+                    day=parsed_date.day
+                )
+                    
+        txn.save()
+        
+        serializer = self.get_serializer(txn)
+        return Response({
+            "message": "Transaksi berhasil diubah.",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    # =========================================================================
+    # ENDPOINT: DELETE /api/transactions/{id}/delete/
+    # Delete manual transaction
+    # =========================================================================
+    @action(detail=True, methods=["delete"], url_path="delete")
+    def delete_transaction(self, request, pk=None):
+        txn = self.get_object()
+        txn.delete()
+        return Response({
+            "message": "Transaksi berhasil dihapus."
+        }, status=status.HTTP_200_OK)
+
 
 # =============================================================================
 # SavingsGoalViewSet
@@ -945,7 +1001,7 @@ class BudgetGoalViewSet(viewsets.ViewSet):
             "monthly_expense": float(monthly_expense),
             "monthly_savings": float(monthly_savings),
             "total_goals": goals.count(),
-            "completed_goals": goals.filter(current_amount__gte=models.F("target_amount")).count(),
+            "completed_goals": goals.filter(current_amount__gte=F("target_amount")).count(),
             "goals": goals_data,
         }, status=status.HTTP_200_OK)
 
