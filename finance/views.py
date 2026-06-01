@@ -566,37 +566,41 @@ class TransactionViewSet(viewsets.ModelViewSet):
     # Override standard update agar bisa handle category_hint + type dari Flutter
     # =========================================================================
     def update(self, request, *args, **kwargs):
+        from django.utils.dateparse import parse_date, parse_time
+        from datetime import datetime
+
         partial = kwargs.pop('partial', False)
         txn = self.get_object()
 
-        amount = request.data.get("amount")
+        amount      = request.data.get("amount")
         description = request.data.get("description")
-        type_ = request.data.get("type", txn.category.type if txn.category else "expense")
+        type_       = request.data.get("type", txn.category.type if txn.category else "expense")
         category_hint = request.data.get("category_hint")
-        date_str = request.data.get("date")
+        date_str    = request.data.get("date")   # format: YYYY-MM-DD
+        time_str    = request.data.get("time")   # format: HH:MM
 
         if amount is not None:
             txn.amount = amount
 
+        if description is not None:
+            txn.description = description
+
         if category_hint:
-            # Cari kategori berdasarkan nama DAN tipe agar perubahan income<->expense benar
+            # get_or_create berdasarkan nama + tipe agar income<->expense bisa berubah
             category, _ = Category.objects.get_or_create(
                 user=request.user, name=category_hint, type=type_
             )
             txn.category = category
 
-        if description is not None:
-            txn.description = description
+        # Update transaction_date — gabungkan tanggal dan waktu
+        current_dt = timezone.localtime(txn.transaction_date)
+        new_date = parse_date(date_str) if date_str else current_dt.date()
+        new_time = parse_time(time_str) if time_str else current_dt.time()
 
-        if date_str:
-            from django.utils.dateparse import parse_date
-            parsed_date = parse_date(date_str)
-            if parsed_date:
-                txn.transaction_date = txn.transaction_date.replace(
-                    year=parsed_date.year,
-                    month=parsed_date.month,
-                    day=parsed_date.day,
-                )
+        if date_str or time_str:
+            naive_dt = datetime.combine(new_date, new_time)
+            # Simpan dengan timezone yang sama seperti sebelumnya
+            txn.transaction_date = timezone.make_aware(naive_dt, current_dt.tzinfo)
 
         txn.save()
 
