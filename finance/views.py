@@ -55,14 +55,17 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="save-transaction")
     def save_transaction(self, request):
-        # request.user sudah pasti terisi karena IsAuthenticated
+        from django.utils.dateparse import parse_date
+        from datetime import datetime, timezone as dt_tz, timedelta
+
         user = request.user
 
-        amount = request.data.get("amount")
-        description = request.data.get("description", "")
-        type_ = request.data.get("type", "expense")
+        amount        = request.data.get("amount")
+        description   = request.data.get("description", "")
+        type_         = request.data.get("type", "expense")
         category_hint = request.data.get("category_hint", "Lainnya")
-        date_str = request.data.get("date")
+        date_str      = request.data.get("date")   # YYYY-MM-DD
+        time_str      = request.data.get("time")   # HH:MM
 
         if not amount:
             return Response(
@@ -70,17 +73,43 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Cari atau buat kategori milik user ini
-        category, _ = Category.objects.get_or_create(
-            user=user, name=category_hint, type=type_
-        )
+        # ── Bangun transaction_date dari date + time (WIB = UTC+7) ───────────
+        WIB = dt_tz(timedelta(hours=7))
+        if date_str:
+            parsed_date = parse_date(date_str)
+            if parsed_date:
+                if time_str:
+                    try:
+                        parts = time_str.split(":")
+                        hour, minute = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+                    except (ValueError, IndexError):
+                        hour, minute = 0, 0
+                else:
+                    hour, minute = 0, 0
+                txn_date = datetime(
+                    parsed_date.year, parsed_date.month, parsed_date.day,
+                    hour, minute, tzinfo=WIB
+                )
+            else:
+                txn_date = timezone.now()
+        else:
+            txn_date = timezone.now()
+
+        # ── Cari atau buat kategori ──────────────────────────────────────────
+        category = Category.objects.filter(user=user, name=category_hint).first()
+        if category:
+            if category.type != type_:
+                category.type = type_
+                category.save()
+        else:
+            category = Category.objects.create(user=user, name=category_hint, type=type_)
 
         txn = Transaction.objects.create(
             user=user,
             category=category,
             amount=amount,
             description=description,
-            transaction_date=date_str or timezone.now(),
+            transaction_date=txn_date,
             input_source="manual",
         )
 
@@ -566,18 +595,18 @@ class TransactionViewSet(viewsets.ModelViewSet):
     # Override standard update agar bisa handle category_hint + type dari Flutter
     # =========================================================================
     def update(self, request, *args, **kwargs):
-        from django.utils.dateparse import parse_date, parse_time
-        from datetime import datetime
+        from django.utils.dateparse import parse_date
+        from datetime import datetime, timezone as dt_tz, timedelta
 
-        partial = kwargs.pop('partial', False)
+        kwargs.pop('partial', False)
         txn = self.get_object()
 
-        amount      = request.data.get("amount")
-        description = request.data.get("description")
-        type_       = request.data.get("type", txn.category.type if txn.category else "expense")
+        amount        = request.data.get("amount")
+        description   = request.data.get("description")
+        type_         = request.data.get("type", txn.category.type if txn.category else "expense")
         category_hint = request.data.get("category_hint")
-        date_str    = request.data.get("date")   # format: YYYY-MM-DD
-        time_str    = request.data.get("time")   # format: HH:MM
+        date_str      = request.data.get("date")   # YYYY-MM-DD
+        time_str      = request.data.get("time")   # HH:MM
 
         if amount is not None:
             txn.amount = amount
@@ -585,30 +614,51 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if description is not None:
             txn.description = description
 
+        # ── Update kategori ─────────────────────────────────────────────────
         if category_hint:
-            # Cari kategori berdasarkan nama — jika ada, update type-nya sesuai request
-            # Ini agar kategori "Income" yang salah type bisa dikoreksi otomatis
-            try:
-                category = Category.objects.get(user=request.user, name=category_hint)
+            # filter().first() lebih aman dari get() — tidak raise MultipleObjectsReturned
+            category = Category.objects.filter(user=request.user, name=category_hint).first()
+            if category:
                 if category.type != type_:
                     category.type = type_
-                    category.save()
-            except Category.DoesNotExist:
+                    category.save(update_fields=["type"])
+            else:
                 category = Category.objects.create(
                     user=request.user, name=category_hint, type=type_
                 )
             txn.category = category
 
-        # Update transaction_date — gabungkan tanggal dan waktu
-        current_dt = timezone.localtime(txn.transaction_date)
-        new_date = parse_date(date_str) if date_str else current_dt.date()
-        new_time = parse_time(time_str) if time_str else current_dt.time()
-
+        # ── Update transaction_date dengan date + time (WIB = UTC+7) ────────
         if date_str or time_str:
-            naive_dt = datetime.combine(new_date, new_time)
-            # Gunakan timezone lokal Django (TIME_ZONE di settings.py)
-            local_tz = timezone.get_current_timezone()
-            txn.transaction_date = timezone.make_aware(naive_dt, local_tz)
+            WIB = dt_tz(timedelta(hours=7))
+
+            # Ambil tanggal: dari request atau dari data saat ini
+            if date_str:
+                target_date = parse_date(date_str)
+                if not target_date:
+                    # Jika parse gagal, pakai tanggal saat ini
+                    target_date = datetime.now(dt_tz.utc).date()
+            else:
+                # Ambil tanggal dari transaction_date yang sudah ada
+                target_date = (txn.transaction_date + timedelta(hours=7)).date()
+
+            # Ambil jam: dari request atau dari data saat ini
+            if time_str:
+                try:
+                    parts = time_str.split(":")
+                    hour   = int(parts[0])
+                    minute = int(parts[1]) if len(parts) > 1 else 0
+                except (ValueError, IndexError):
+                    hour, minute = 0, 0
+            else:
+                existing_wib = txn.transaction_date + timedelta(hours=7)
+                hour   = existing_wib.hour
+                minute = existing_wib.minute
+
+            txn.transaction_date = datetime(
+                target_date.year, target_date.month, target_date.day,
+                hour, minute, tzinfo=WIB
+            )
 
         txn.save()
 
