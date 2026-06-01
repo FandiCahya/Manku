@@ -562,31 +562,32 @@ class TransactionViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
     # =========================================================================
-    # ENDPOINT: PUT/PATCH /api/transactions/{id}/update/
-    # Update manual transaction
+    # ENDPOINT: PUT/PATCH /api/transactions/{id}/
+    # Override standard update agar bisa handle category_hint + type dari Flutter
     # =========================================================================
-    @action(detail=True, methods=["put", "patch"], url_path="update")
-    def update_transaction(self, request, pk=None):
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
         txn = self.get_object()
-        
+
         amount = request.data.get("amount")
-        description = request.data.get("description", txn.description)
+        description = request.data.get("description")
         type_ = request.data.get("type", txn.category.type if txn.category else "expense")
         category_hint = request.data.get("category_hint")
         date_str = request.data.get("date")
-        
+
         if amount is not None:
             txn.amount = amount
-            
+
         if category_hint:
+            # Cari kategori berdasarkan nama DAN tipe agar perubahan income<->expense benar
             category, _ = Category.objects.get_or_create(
                 user=request.user, name=category_hint, type=type_
             )
             txn.category = category
-            
+
         if description is not None:
             txn.description = description
-            
+
         if date_str:
             from django.utils.dateparse import parse_date
             parsed_date = parse_date(date_str)
@@ -594,23 +595,22 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 txn.transaction_date = txn.transaction_date.replace(
                     year=parsed_date.year,
                     month=parsed_date.month,
-                    day=parsed_date.day
+                    day=parsed_date.day,
                 )
-                    
+
         txn.save()
-        
+
         serializer = self.get_serializer(txn)
         return Response({
             "message": "Transaksi berhasil diubah.",
-            "data": serializer.data
+            "data": serializer.data,
         }, status=status.HTTP_200_OK)
 
     # =========================================================================
-    # ENDPOINT: DELETE /api/transactions/{id}/delete/
-    # Delete manual transaction
+    # ENDPOINT: DELETE /api/transactions/{id}/
+    # Override standard destroy agar memberikan pesan yang jelas
     # =========================================================================
-    @action(detail=True, methods=["delete"], url_path="delete")
-    def delete_transaction(self, request, pk=None):
+    def destroy(self, request, *args, **kwargs):
         txn = self.get_object()
         txn.delete()
         return Response({
