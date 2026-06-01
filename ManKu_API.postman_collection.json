@@ -236,9 +236,9 @@
           "response": []
         },
         {
-          "name": "07 Update Transaksi",
+          "name": "07 Update Transaksi (Pengeluaran)",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{access_token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -246,7 +246,23 @@
             "url": { "raw": "{{base_url}}/api/transactions/{{transaction_id}}/", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}",""] },
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"description\": \"Beli nasi goreng + teh manis\",\n    \"amount\": 28000\n}"
+              "raw": "{\n    \"amount\": 30000,\n    \"description\": \"Beli nasi goreng + teh manis\",\n    \"type\": \"expense\",\n    \"category_hint\": \"Makanan\",\n    \"date\": \"2025-06-01\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07b Update ke Pemasukan (Test Income)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/transactions/{{transaction_id}}/", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 5000000,\n    \"description\": \"Gaji bulan Juni\",\n    \"type\": \"income\",\n    \"category_hint\": \"Income\",\n    \"date\": \"2025-06-01\"\n}"
             }
           },
           "response": []
