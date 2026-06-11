@@ -1,0 +1,10 @@
+^D:\PROJECT FLUTTER\MY_MANAGE\BUILD\WINDOWS\X64\_DEPS\SQLITE3-SUBBUILD\CMAKEFILES\B818650042932423D8845505B2B09A11\GENERATE.STAMP.RULE
+setlocal
+"D:\Visual Studio\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" "-SD:/Project Flutter/my_manage/build/windows/x64/_deps/sqlite3-subbuild" "-BD:/Project Flutter/my_manage/build/windows/x64/_deps/sqlite3-subbuild" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "D:/Project Flutter/my_manage/build/windows/x64/_deps/sqlite3-subbuild/sqlite3-populate.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
