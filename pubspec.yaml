@@ -54,6 +54,12 @@ dependencies:
   sqflite_common_ffi: ^2.3.3
   # Provides pre-built SQLite3 DLL for Windows (required for sqflite_common_ffi)
   sqlite3_flutter_libs: ^0.5.0
+  
+  # Image & Media
+  image_picker: ^1.0.7
+  
+  # Speech Recognition
+  speech_to_text: ^6.6.0
 
   path: any
   sqflite_common_ffi_web: ^1.0.2

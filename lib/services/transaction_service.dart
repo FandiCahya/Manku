@@ -6,6 +6,7 @@ import '../core/database/db_helper.dart';
 import '../models/dashboard_summary.dart';
 import '../models/transaction_api.dart';
 import '../models/report_summary.dart';
+import '../features/transactions/domain/chat_transaction_response.dart';
 
 class TransactionService {
 
@@ -400,6 +401,29 @@ class TransactionService {
       );
     } catch (e) {
       debugPrint('Sync delete failed: $e');
+    }
+  }
+
+  // ── 7. CHAT TRANSACTION ────────────────────────────────────────────────────
+  static Future<ChatTransactionResponse> saveChatTransaction(String text) async {
+    try {
+      final response = await ApiClient.dio.post<Map<String, dynamic>>(
+        ApiConfig.saveChatTransactionEndpoint,
+        data: {'text': text},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        if (data == null) {
+          throw Exception('Response data is null');
+        }
+        return ChatTransactionResponse.fromJson(data);
+      } else {
+        throw Exception('Failed to save chat transaction: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('saveChatTransaction error: $e');
+      rethrow;
     }
   }
 }

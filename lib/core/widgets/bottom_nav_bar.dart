@@ -5,23 +5,33 @@ import 'nav_bar_item.dart';
 class BottomNavBar extends StatefulWidget {
   final Function(int) onItemSelected;
   final int currentIndex;
+  final VoidCallback? onAddPressed;
 
   const BottomNavBar({
-    required this.onItemSelected, super.key,
+    required this.onItemSelected, 
+    super.key,
     this.currentIndex = 0,
+    this.onAddPressed,
   });
 
   @override
   State<BottomNavBar> createState() => _BottomNavBarState();
 }
 
-class _BottomNavBarState extends State<BottomNavBar> {
+class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderStateMixin {
   late int selectedIndex;
+  late AnimationController _fabCtrl;
 
   @override
   void initState() {
     super.initState();
     selectedIndex = widget.currentIndex;
+    _fabCtrl = AnimationController(
+      vsync: this, 
+      duration: const Duration(milliseconds: 150),
+      lowerBound: 0.9, 
+      value: 1.0
+    );
   }
 
   @override
@@ -33,7 +43,15 @@ class _BottomNavBarState extends State<BottomNavBar> {
   }
 
   @override
+  void dispose() {
+    _fabCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       height: 90,
       decoration: BoxDecoration(
@@ -78,8 +96,59 @@ class _BottomNavBarState extends State<BottomNavBar> {
                   },
                 ),
               ),
-              // Empty space for the FAB
-              const SizedBox(width: 72),
+              // Center item - Add Transaction
+              Expanded(
+                child: GestureDetector(
+                  onTapDown: (_) => _fabCtrl.reverse(),
+                  onTapUp: (_) {
+                    _fabCtrl.forward();
+                    widget.onAddPressed?.call();
+                  },
+                  onTapCancel: () => _fabCtrl.forward(),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ScaleTransition(
+                        scale: _fabCtrl,
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF2C5F87)
+                                : context.colors.mint,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (isDark
+                                        ? const Color(0xFF2C5F87)
+                                        : context.colors.mint)
+                                    .withOpacity(0.4),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Add',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : context.colors.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               Expanded(
                 child: NavBarItem(
                   icon: Icons.analytics_rounded,

@@ -20,6 +20,8 @@ class _AddTransactionTabState extends State<AddTransactionTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return SafeArea(
       child: Column(
         children: [
@@ -27,7 +29,10 @@ class _AddTransactionTabState extends State<AddTransactionTab> {
             isFormMode: _isFormMode,
             onToggle: () => setState(() => _isFormMode = !_isFormMode),
           ),
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: isDark ? const Color(0xFF2A4A62) : null,
+          ),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
@@ -69,6 +74,8 @@ class _AddTransactionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(
@@ -81,7 +88,7 @@ class _AddTransactionHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: context.colors.secondary,
+                  color: isDark ? Colors.white : context.colors.secondary,
                 ),
               ),
               Text(
@@ -90,7 +97,9 @@ class _AddTransactionHeader extends StatelessWidget {
                     : 'Ceritakan transaksimu dengan teks',
                 style: TextStyle(
                   fontSize: 12,
-                  color: context.colors.onSurfaceVariant.withValues(alpha: 0.7),
+                  color: isDark 
+                      ? Colors.white70 
+                      : context.colors.onSurfaceVariant.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -103,12 +112,14 @@ class _AddTransactionHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: isFormMode
-                    ? context.colors.primaryContainer
-                    : context.colors.secondaryContainer,
+                    ? (isDark ? const Color(0xFF2C5F87) : context.colors.primaryContainer)
+                    : (isDark ? const Color(0xFF3D5A6B) : context.colors.secondaryContainer),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: (isFormMode ? context.colors.primary : context.colors.secondary)
+                    color: (isFormMode 
+                        ? (isDark ? const Color(0xFF2C5F87) : context.colors.primary)
+                        : (isDark ? const Color(0xFF3D5A6B) : context.colors.secondary))
                         .withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
@@ -121,9 +132,11 @@ class _AddTransactionHeader extends StatelessWidget {
                   Icon(
                     isFormMode ? Icons.chat_bubble_outline : Icons.edit_note,
                     size: 16,
-                    color: isFormMode
-                        ? context.colors.onPrimaryContainer
-                        : context.colors.onSecondaryContainer,
+                    color: isDark
+                        ? Colors.white
+                        : (isFormMode
+                            ? context.colors.onPrimaryContainer
+                            : context.colors.onSecondaryContainer),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -131,9 +144,11 @@ class _AddTransactionHeader extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: isFormMode
-                          ? context.colors.onPrimaryContainer
-                          : context.colors.onSecondaryContainer,
+                      color: isDark
+                          ? Colors.white
+                          : (isFormMode
+                              ? context.colors.onPrimaryContainer
+                              : context.colors.onSecondaryContainer),
                     ),
                   ),
                 ],

@@ -5,7 +5,7 @@ import '../../../../widgets/balance_card.dart';
 import '../../../../widgets/budget_gauge.dart';
 import '../../../../widgets/spending_trends_chart.dart';
 import '../../../../widgets/stats_grid.dart';
-import '../../../../widgets/transaction_input_form.dart';
+import 'add_transaction_tab.dart';
 import '../../../dashboard/presentation/cubit/dashboard_cubit.dart';
 import '../../../dashboard/presentation/cubit/dashboard_state.dart';
 import '../../../transactions/presentation/cubit/transaction_cubit.dart';
@@ -83,11 +83,12 @@ class DashboardTab extends StatelessWidget {
         return BlocProvider.value(
           value: context.read<TransactionCubit>(),
           child: Container(
+            height: MediaQuery.of(context).size.height * 0.85,
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1D3448) : Colors.white,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
             ),
-            child: TransactionInputForm(
+            child: AddTransactionTab(
               onTransactionSaved: () {
                 Navigator.pop(context);
                 context.read<DashboardCubit>().fetchSummary();

@@ -14,6 +14,7 @@ class ApiConfig {
 
   // ── Transactions ──────────────────────────────────────────────────────────
   static String get saveTransactionEndpoint   => '$baseUrl/api/transactions/save-transaction/';
+  static String get saveChatTransactionEndpoint => '$baseUrl/api/transactions/chat-input/';
   static String get chatInputEndpoint         => '$baseUrl/api/transactions/chat-input/';
   static String get dashboardSummaryEndpoint  => '$baseUrl/api/transactions/dashboard-summary/';
   static String get transactionHistoryEndpoint=> '$baseUrl/api/transactions/history/';

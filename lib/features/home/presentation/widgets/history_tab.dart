@@ -257,7 +257,7 @@ class TransactionItemWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${txn.time} • ${txn.categoryName}',
+                  txn.categoryName,
                   style: TextStyle(
                     color: isDark ? Colors.white70 : context.colors.onSurfaceVariant,
                     fontSize: 11,

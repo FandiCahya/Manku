@@ -60,12 +60,6 @@ class TransactionRepository {
   static Future<ChatTransactionResponse> saveChatTransaction(
     String text,
   ) async {
-    // Note: Local NLP for chat is complex to do offline.
-    // Ideally, you still need an API for parsing chat text into categories and amounts.
-    // Since we are offline-first, if they use the chat feature, we might still need to call the NLP API,
-    // then save the parsed result locally.
-    // For now, as a placeholder, we can just save it as "Uncategorized" locally if offline,
-    // or you can leave the chat feature to require internet connection.
-    throw Exception('Fitur chat saat ini butuh koneksi internet (karena butuh AI backend). Gunakan input manual untuk offline.');
+    return await TransactionService.saveChatTransaction(text);
   }
 }
