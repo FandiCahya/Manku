@@ -33,6 +33,7 @@ migrate_working_dir/
 .pub/
 /build/arguments.json
 /build/app/
+!/build/web/assets/.env
 /coverage/
 
 # Symbolication related
