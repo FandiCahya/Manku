@@ -39,7 +39,7 @@ class BudgetHeaderSliver extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
-                          Icons.account_balance_wallet,
+                          Icons.savings,
                           color: Colors.white,
                           size: 22,
                         ),
@@ -49,7 +49,7 @@ class BudgetHeaderSliver extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Budget Goals',
+                            'Tujuan Keuangan',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 20,
@@ -58,7 +58,7 @@ class BudgetHeaderSliver extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            monthLabel,
+                            'Tabungan Jangka Panjang',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.75),
                               fontSize: 12,

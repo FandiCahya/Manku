@@ -70,7 +70,7 @@ class _TotalBudgetRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'TOTAL BUDGET',
+              'TOTAL TARGET',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.7),
                 fontSize: 11,
@@ -130,7 +130,7 @@ class _BudgetProgressSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Terpakai: ${BudgetUiHelpers.formatCurrency(summary.totalSpent)}',
+              'Terkumpul: ${BudgetUiHelpers.formatCurrency(summary.totalSpent)}',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 12,
@@ -154,17 +154,17 @@ class _BudgetProgressSection extends StatelessWidget {
             minHeight: 10,
             backgroundColor: Colors.white.withValues(alpha: 0.2),
             valueColor: AlwaysStoppedAnimation(
-              pct > 1.0
-                  ? Colors.red.shade300
-                  : pct >= 0.9
-                      ? Colors.orange.shade300
-                      : Colors.greenAccent.shade200,
+              pct >= 1.0
+                  ? Colors.green.shade300  // Target tercapai!
+                  : pct >= 0.7
+                      ? Colors.lightGreen.shade300  // Mendekati target
+                      : Colors.blue.shade200,  // Masih jauh
             ),
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Sisa: ${BudgetUiHelpers.formatCurrency(summary.totalRemaining)}',
+          'Kurang: ${BudgetUiHelpers.formatCurrency(summary.totalRemaining)}',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.8),
             fontSize: 12,

@@ -101,8 +101,8 @@ class TransactionService {
         return DashboardSummary(
           totalBalance: 0,
           dailyExpense: 0,
-          budgetLeft: 0,
           totalIncome: 0,
+          totalExpense: 0,
           spendingTrends: [],
         );
       }
@@ -152,8 +152,8 @@ class TransactionService {
       return DashboardSummary(
         totalBalance: totalBalance,
         dailyExpense: dailyExpense,
-        budgetLeft: budgetLeft,
         totalIncome: totalIncome,
+        totalExpense: totalIncome - budgetLeft,
         spendingTrends: trends,
       );
     } catch (e) {

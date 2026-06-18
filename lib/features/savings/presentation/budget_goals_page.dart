@@ -55,7 +55,7 @@ class BudgetGoalsPage extends StatelessWidget {
                   foregroundColor: Colors.white,
                   icon: const Icon(Icons.add),
                   label: const Text(
-                    'Set Budget',
+                    'Tambah Tujuan',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   elevation: 4,
@@ -301,9 +301,9 @@ class _LoadedView extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Budget?'),
+        title: const Text('Hapus Tujuan?'),
         content: Text(
-          'Budget untuk "${item.categoryName}" akan dihapus.',
+          'Tujuan "${item.categoryName}" akan dihapus.',
         ),
         actions: [
           TextButton(
@@ -341,7 +341,7 @@ class _BudgetListHeader extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            'Budget per Kategori',
+            'Tujuan Tabungan',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -357,7 +357,7 @@ class _BudgetListHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '$count kategori',
+              '$count tujuan',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -389,14 +389,14 @@ class _EmptyBudgetView extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.account_balance_wallet_outlined,
+              Icons.savings_outlined,
               size: 48,
               color: context.colors.outlineVariant,
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'Belum Ada Budget',
+            'Belum Ada Tujuan',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -405,7 +405,7 @@ class _EmptyBudgetView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tambahkan budget per kategori untuk\nmemantau pengeluaranmu!',
+            'Tambahkan tujuan tabungan untuk\nmencapai impianmu!',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,

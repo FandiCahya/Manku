@@ -21,20 +21,20 @@ class BudgetCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final warnColor = BudgetUiHelpers.warningColor(item.warningLevel);
     final warnBg = BudgetUiHelpers.warningBg(item.warningLevel);
-    final isExceeded = item.warningLevel == BudgetWarningLevel.exceeded;
-    final pct = (item.percentageUsed / 100).clamp(0.0, 1.5);
+    final isCompleted = item.warningLevel == BudgetWarningLevel.exceeded;
+    final pct = (item.percentageUsed / 100).clamp(0.0, 1.0);
 
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1D3448) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: isExceeded
-            ? Border.all(color: Colors.red.shade200, width: 1.5)
+        border: isCompleted
+            ? Border.all(color: Colors.green.shade200, width: 1.5)
             : null,
         boxShadow: [
           BoxShadow(
-            color: isExceeded
-                ? Colors.red.withValues(alpha: 0.15)
+            color: isCompleted
+                ? Colors.green.withValues(alpha: 0.15)
                 : Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
@@ -70,7 +70,7 @@ class BudgetCard extends StatelessWidget {
                   warnColor: warnColor,
                   warnBg: warnBg,
                   pct: pct,
-                  isExceeded: isExceeded,
+                  isCompleted: isCompleted,
                 ),
               ],
             ),
@@ -146,8 +146,9 @@ class _BudgetCardHeader extends StatelessWidget {
           ),
         ),
         Text(
-          item.warningLevel == BudgetWarningLevel.exceeded ? '😱' : 
-          item.warningLevel == BudgetWarningLevel.warning ? '😰' : '🐼',
+          item.warningLevel == BudgetWarningLevel.exceeded ? '🎉' : 
+          item.warningLevel == BudgetWarningLevel.critical ? '💪' : 
+          item.warningLevel == BudgetWarningLevel.warning ? '📈' : '🎯',
           style: const TextStyle(fontSize: 24),
         ),
         const SizedBox(width: 8),
@@ -165,7 +166,7 @@ class _BudgetCardHeader extends StatelessWidget {
               child: Row(children: [
                 Icon(Icons.edit_outlined, color: Colors.blue, size: 18),
                 SizedBox(width: 10),
-                Text('Edit Budget'),
+                Text('Edit Tujuan'),
               ]),
             ),
             const PopupMenuItem(
@@ -189,14 +190,14 @@ class _BudgetCardProgress extends StatelessWidget {
     required this.warnColor,
     required this.warnBg,
     required this.pct,
-    required this.isExceeded,
+    required this.isCompleted,
   });
 
   final BudgetGoalItem item;
   final Color warnColor;
   final Color warnBg;
   final double pct;
-  final bool isExceeded;
+  final bool isCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -259,22 +260,22 @@ class _BudgetCardProgress extends StatelessWidget {
         Row(
           children: [
             Icon(
-              isExceeded
-                  ? Icons.arrow_upward_rounded
-                  : Icons.arrow_downward_rounded,
+              isCompleted
+                  ? Icons.check_circle_outline
+                  : Icons.trending_up,
               size: 13,
               color:
-                  isExceeded ? Colors.red.shade600 : Colors.green.shade600,
+                  isCompleted ? Colors.green.shade600 : Colors.blue.shade600,
             ),
             const SizedBox(width: 4),
             Text(
-              isExceeded
-                  ? 'Melebihi ${BudgetUiHelpers.formatCurrency(item.spentAmount - item.budgetAmount)}'
-                  : 'Sisa ${BudgetUiHelpers.formatCurrency(item.remaining)}',
+              isCompleted
+                  ? 'Target tercapai! 🎉'
+                  : 'Kurang ${BudgetUiHelpers.formatCurrency(item.remaining)}',
               style: TextStyle(
                 fontSize: 12,
                 color:
-                    isExceeded ? Colors.red.shade600 : Colors.green.shade600,
+                    isCompleted ? Colors.green.shade600 : Colors.blue.shade600,
                 fontWeight: FontWeight.w600,
               ),
             ),

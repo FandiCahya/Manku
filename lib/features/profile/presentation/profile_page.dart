@@ -47,6 +47,8 @@ class _ProfilePageState extends State<ProfilePage>
         userEmail = prefs.getString('user_email') ?? '';
         userPhotoUrl = prefs.getString('user_photo');
       });
+      // Debug: Print photo URL to console
+      debugPrint('📸 User Photo URL: $userPhotoUrl');
     }
   }
 
@@ -117,7 +119,7 @@ class _ProfilePageState extends State<ProfilePage>
                     indicatorSize: TabBarIndicatorSize.tab,
                     tabs: const [
                       Tab(text: '👤 Profil'),
-                      Tab(text: '📊 Pengelolaan Keuangan'),
+                      Tab(text: '🎯 Tujuan Keuangan'),
                     ],
                   ),
                 ),

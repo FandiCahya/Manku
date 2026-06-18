@@ -4,23 +4,33 @@ import '../core/constants/colors.dart';
 
 class StatsGrid extends StatelessWidget {
   final double? dailyExpense;
-  final double? budgetLeft;
-  final double? totalIncome;
+  final double? totalExpense;
+  final double? monthlyBalance;
   final bool isLoading;
 
   const StatsGrid({
     super.key,
     this.dailyExpense,
-    this.budgetLeft,
-    this.totalIncome,
+    this.totalExpense,
+    this.monthlyBalance,
     this.isLoading = false,
   });
 
   String _formatShort(double? v) {
     if (v == null) return '0';
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(0)}K';
-    return v.toStringAsFixed(0);
+    final isNegative = v < 0;
+    final absV = v.abs();
+    
+    String result;
+    if (absV >= 1000000) {
+      result = '${(absV / 1000000).toStringAsFixed(1)}M';
+    } else if (absV >= 1000) {
+      result = '${(absV / 1000).toStringAsFixed(0)}K';
+    } else {
+      result = absV.toStringAsFixed(0);
+    }
+    
+    return isNegative ? '-$result' : result;
   }
 
   @override
@@ -40,11 +50,15 @@ class StatsGrid extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _StatCard(
-            icon: Icons.account_balance_wallet_rounded,
-            iconColor: context.colors.darkNav,
-            iconBgColor: context.colors.tertiaryContainer,
-            label: 'Budget Left',
-            value: _formatShort(budgetLeft),
+            icon: Icons.trending_up_rounded,
+            iconColor: (monthlyBalance ?? 0) >= 0 
+                ? context.colors.mint 
+                : context.colors.coral,
+            iconBgColor: (monthlyBalance ?? 0) >= 0
+                ? context.colors.mint.withValues(alpha: 0.15)
+                : context.colors.coral.withValues(alpha: 0.15),
+            label: 'Monthly Balance',
+            value: _formatShort(monthlyBalance),
             isLoading: isLoading,
           ),
         ),

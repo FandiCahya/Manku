@@ -49,7 +49,7 @@ class _SetBudgetSheetState extends State<SetBudgetSheet> {
     if ((name.isEmpty && !_isEditing) || amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nama kategori & jumlah wajib diisi'),
+          content: Text('Nama tujuan & target wajib diisi'),
         ),
       );
       return;
@@ -126,7 +126,7 @@ class _SheetTitle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isEditing ? 'Edit Budget' : 'Set Budget Baru',
+          isEditing ? 'Edit Tujuan' : 'Tambah Tujuan Baru',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -136,8 +136,8 @@ class _SheetTitle extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           isEditing
-              ? 'Update budget untuk kategori "${existing!.categoryName}"'
-              : 'Tentukan batas pengeluaran per kategori',
+              ? 'Update tujuan "${existing!.categoryName}"'
+              : 'Buat tujuan tabungan baru',
           style: TextStyle(fontSize: 13, color: context.colors.onSurfaceVariant),
         ),
       ],
@@ -160,9 +160,9 @@ class _CategoryField extends StatelessWidget {
       controller: controller,
       enabled: !isEditing,
       decoration: InputDecoration(
-        hintText: 'Nama Kategori (contoh: Makanan)',
+        hintText: 'Nama Tujuan (contoh: Beli Rumah)',
         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-        prefixIcon: Icon(Icons.category_outlined,
+        prefixIcon: Icon(Icons.flag_outlined,
             color: context.colors.primary, size: 20),
         filled: true,
         fillColor: isEditing
@@ -199,9 +199,9 @@ class _AmountField extends StatelessWidget {
       controller: controller,
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
-        hintText: 'Jumlah Budget (Rp)',
+        hintText: 'Target Nominal (Rp)',
         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-        prefixIcon: Icon(Icons.account_balance_wallet_outlined,
+        prefixIcon: Icon(Icons.savings_outlined,
             color: context.colors.primary, size: 20),
         filled: true,
         fillColor: context.colors.surfaceContainerLow,
@@ -242,11 +242,13 @@ class _MonthInfoChip extends StatelessWidget {
         children: [
           Icon(Icons.info_outline, size: 16, color: context.colors.primary),
           const SizedBox(width: 8),
-          Text(
-            'Budget berlaku untuk bulan ${monthLabel ?? 'ini'}',
-            style: TextStyle(
-              fontSize: 12,
-              color: context.colors.onSurfaceVariant,
+          Expanded(
+            child: Text(
+              'Tujuan ini tidak akan reset setiap bulan',
+              style: TextStyle(
+                fontSize: 12,
+                color: context.colors.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -280,7 +282,7 @@ class _SubmitButton extends StatelessWidget {
           elevation: 0,
         ),
         child: Text(
-          isEditing ? 'Update Budget' : 'Set Budget',
+          isEditing ? 'Update Tujuan' : 'Simpan Tujuan',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),

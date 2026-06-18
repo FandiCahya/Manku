@@ -159,6 +159,9 @@ class AuthRepository {
         await prefs.setString('user_email', googleUser.email);
         if (googleUser.photoUrl != null) {
           await prefs.setString('user_photo', googleUser.photoUrl!);
+          debugPrint('📸 Saved Google photo URL: ${googleUser.photoUrl}');
+        } else {
+          debugPrint('⚠️ Google photo URL is null');
         }
 
         final user = UserModel(

@@ -72,10 +72,14 @@ class _AppHeaderState extends State<AppHeader> {
               ],
             ),
             child: ClipOval(
-              child: userPhotoUrl != null
+              child: userPhotoUrl != null && userPhotoUrl!.isNotEmpty
                   ? Image.network(
                       userPhotoUrl!,
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return _avatarFallback();
+                      },
                       errorBuilder: (_, __, ___) => _avatarFallback(),
                     )
                   : _avatarFallback(),

@@ -44,10 +44,25 @@ class ProfileHeader extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(36),
-                  child: photoUrl != null
+                  child: photoUrl != null && photoUrl!.isNotEmpty
                       ? Image.network(
                           photoUrl!,
                           fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(
+                                  context.colors.primary,
+                                ),
+                              ),
+                            );
+                          },
                           errorBuilder: (_, __, ___) => Icon(
                             Icons.person,
                             size: 40,

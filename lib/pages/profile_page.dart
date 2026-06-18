@@ -336,7 +336,7 @@ class _ProfilePageState extends State<ProfilePage>
               indicatorSize: TabBarIndicatorSize.tab,
               tabs: [
                 Tab(text: '👤 Profil'),
-                Tab(text: '📊 Pengelolaan Keuangan'),
+                Tab(text: '🎯 Tujuan Keuangan'),
               ],
             ),
           ),
@@ -382,10 +382,35 @@ class _ProfilePageState extends State<ProfilePage>
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(36),
-                  child: userPhotoUrl != null
-                      ? Image.network(userPhotoUrl!, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(Icons.person, size: 40, color: context.colors.primary))
-                      : Icon(Icons.person, size: 40, color: context.colors.primary),
+                  child: userPhotoUrl != null && userPhotoUrl!.isNotEmpty
+                      ? Image.network(
+                          userPhotoUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: context.colors.onPrimary,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    context.colors.primary,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.person,
+                            size: 40,
+                            color: context.colors.primary,
+                          ),
+                        )
+                      : Icon(
+                          Icons.person,
+                          size: 40,
+                          color: context.colors.primary,
+                        ),
                 ),
               ),
               SizedBox(width: 16),
