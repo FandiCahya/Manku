@@ -74,3 +74,64 @@ class LoginSerializer(serializers.Serializer):
 
 class GoogleLoginSerializer(serializers.Serializer):
     id_token = serializers.CharField()
+
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    """Serializer untuk request reset password"""
+    email = serializers.EmailField(
+        error_messages={
+            "required": "Email wajib diisi.",
+            "blank": "Email tidak boleh kosong.",
+            "invalid": "Format email tidak valid.",
+        }
+    )
+
+    def validate_email(self, value):
+        """Validasi bahwa email terdaftar"""
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "Email tidak terdaftar dalam sistem."
+            )
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """Serializer untuk reset password dengan token"""
+    token = serializers.UUIDField(
+        error_messages={
+            "required": "Token wajib diisi.",
+            "invalid": "Format token tidak valid.",
+        }
+    )
+    new_password = serializers.CharField(
+        min_length=6,
+        write_only=True,
+        error_messages={
+            "required": "Password baru wajib diisi.",
+            "min_length": "Password minimal 6 karakter.",
+        }
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        error_messages={
+            "required": "Konfirmasi password wajib diisi.",
+        }
+    )
+
+    def validate(self, data):
+        """Validasi bahwa password dan confirm password sama"""
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError(
+                {"confirm_password": "Password dan konfirmasi password tidak sama."}
+            )
+        return data
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    """Serializer untuk resend OTP"""
+    email = serializers.EmailField(
+        error_messages={
+            "required": "Email wajib diisi.",
+            "invalid": "Format email tidak valid.",
+        }
+    )

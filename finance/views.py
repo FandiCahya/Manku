@@ -510,6 +510,170 @@ class TransactionViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
     # =========================================================================
+    # ENDPOINT: GET /api/transactions/monthly-summary/
+    # Summary untuk bulan tertentu (untuk melihat data historical)
+    # Query params: year=2026&month=1
+    # =========================================================================
+    @action(detail=False, methods=["get"], url_path="monthly-summary")
+    def monthly_summary(self, request):
+        user = request.user
+        
+        # Get year & month from query params (default to current month)
+        now = timezone.localtime()
+        year = int(request.query_params.get('year', now.year))
+        month = int(request.query_params.get('month', now.month))
+        
+        # Validate month
+        if not (1 <= month <= 12):
+            return Response(
+                {"error": "Month must be between 1-12"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Calculate date range for the month
+        from datetime import date
+        first_of_month = date(year, month, 1)
+        
+        if month == 12:
+            last_of_month = date(year + 1, 1, 1)
+        else:
+            last_of_month = date(year, month + 1, 1)
+        
+        # Get transactions for this month
+        transactions = Transaction.objects.filter(
+            user=user,
+            transaction_date__date__gte=first_of_month,
+            transaction_date__date__lt=last_of_month,
+        )
+        
+        # Calculate totals
+        income = transactions.filter(
+            category__type="income"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        expense = transactions.filter(
+            category__type="expense"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Get budget for this month
+        budget = Budget.objects.filter(
+            user=user,
+            month_year=first_of_month
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Category breakdown
+        category_breakdown = []
+        category_data = transactions.filter(
+            category__type="expense"
+        ).values("category__name").annotate(
+            total=Sum("amount"),
+            count=Count("id")
+        ).order_by("-total")
+        
+        for cat in category_data:
+            category_breakdown.append({
+                "category": cat["category__name"],
+                "amount": float(cat["total"]),
+                "count": cat["count"],
+            })
+        
+        return Response({
+            "year": year,
+            "month": month,
+            "month_name": first_of_month.strftime("%B"),
+            "income": float(income),
+            "expense": float(expense),
+            "net": float(income - expense),
+            "budget": float(budget),
+            "budget_left": float(budget - expense),
+            "transaction_count": transactions.count(),
+            "category_breakdown": category_breakdown,
+        }, status=status.HTTP_200_OK)
+
+    # =========================================================================
+    # ENDPOINT: GET /api/transactions/all-time-stats/
+    # Statistik keseluruhan dari semua waktu
+    # =========================================================================
+    @action(detail=False, methods=["get"], url_path="all-time-stats")
+    def all_time_stats(self, request):
+        user = request.user
+        
+        # Get all transactions
+        all_transactions = Transaction.objects.filter(user=user)
+        
+        # Total income & expense
+        income_total = all_transactions.filter(
+            category__type="income"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        expense_total = all_transactions.filter(
+            category__type="expense"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # First & last transaction
+        first_transaction = all_transactions.order_by("transaction_date").first()
+        last_transaction = all_transactions.order_by("-transaction_date").first()
+        
+        # Category stats
+        top_expense_categories = all_transactions.filter(
+            category__type="expense"
+        ).values("category__name").annotate(
+            total=Sum("amount")
+        ).order_by("-total")[:5]
+        
+        top_income_categories = all_transactions.filter(
+            category__type="income"
+        ).values("category__name").annotate(
+            total=Sum("amount")
+        ).order_by("-total")[:5]
+        
+        # Monthly average
+        from datetime import date
+        if first_transaction:
+            first_date = timezone.localtime(first_transaction.transaction_date).date()
+            today = timezone.localtime().date()
+            
+            # Calculate months between first transaction and now
+            months_active = (
+                (today.year - first_date.year) * 12 
+                + today.month - first_date.month + 1
+            )
+            
+            avg_monthly_income = float(income_total / months_active) if months_active > 0 else 0
+            avg_monthly_expense = float(expense_total / months_active) if months_active > 0 else 0
+        else:
+            first_date = None
+            months_active = 0
+            avg_monthly_income = 0
+            avg_monthly_expense = 0
+        
+        return Response({
+            "total_balance": float(income_total - expense_total),
+            "total_income": float(income_total),
+            "total_expense": float(expense_total),
+            "transaction_count": all_transactions.count(),
+            "first_transaction_date": first_date.isoformat() if first_date else None,
+            "last_transaction_date": timezone.localtime(last_transaction.transaction_date).date().isoformat() if last_transaction else None,
+            "months_active": months_active,
+            "average_monthly_income": avg_monthly_income,
+            "average_monthly_expense": avg_monthly_expense,
+            "top_expense_categories": [
+                {
+                    "category": cat["category__name"],
+                    "total": float(cat["total"])
+                }
+                for cat in top_expense_categories
+            ],
+            "top_income_categories": [
+                {
+                    "category": cat["category__name"],
+                    "total": float(cat["total"])
+                }
+                for cat in top_income_categories
+            ],
+        }, status=status.HTTP_200_OK)
+
+    # =========================================================================
     # ENDPOINT: GET /api/transactions/report-summary/
     # total_spending, category_breakdown, performance_six_months
     # =========================================================================

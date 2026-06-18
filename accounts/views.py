@@ -13,12 +13,20 @@ from rest_framework.views import APIView
 # pyrefly: ignore [missing-import]
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import OTPVerification
+from .models import OTPVerification, PasswordResetToken
 from .serializers import (
     GoogleLoginSerializer,
     LoginSerializer,
     RegisterSerializer,
     VerifyOTPSerializer,
+    RequestPasswordResetSerializer,
+    ResetPasswordSerializer,
+    ResendOTPSerializer,
+)
+from .email_templates import (
+    get_otp_email_template,
+    get_password_reset_email_template,
+    get_password_changed_email_template,
 )
 
 
@@ -43,21 +51,28 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-            # Buat OTP
+            # Buat OTP dengan expiry 10 menit
             otp, created = OTPVerification.objects.get_or_create(user=user)
-            otp.generate_code()
+            otp.generate_code(expiry_minutes=10)
 
-            # Kirim Email
+            # Kirim Email dengan template HTML
+            user_name = user.first_name or user.email.split('@')[0]
+            html_message = get_otp_email_template(user_name, otp.code, expiry_minutes=10)
+            
             send_mail(
-                "Kode Verifikasi ManKu",
-                f"Halo {user.first_name},\n\nKode verifikasi Anda adalah: {otp.code}\n\nTerima kasih.",
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
+                subject="Kode Verifikasi ManKu - Aktivasi Akun",
+                message=f"Halo {user_name},\n\nKode verifikasi Anda adalah: {otp.code}\n\nBerlaku selama 10 menit.\n\nTerima kasih.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=html_message,
                 fail_silently=False,
             )
 
             return Response(
-                {"message": "Registrasi berhasil, silakan cek email untuk kode OTP."},
+                {
+                    "message": "Registrasi berhasil! Silakan cek email untuk kode OTP.",
+                    "email": user.email,
+                },
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -73,6 +88,13 @@ class VerifyOTPView(APIView):
             try:
                 user = User.objects.get(email=email)
                 otp = OTPVerification.objects.get(user=user)
+
+                # Cek apakah OTP expired
+                if otp.is_expired():
+                    return Response(
+                        {"error": "Kode OTP sudah kedaluwarsa. Silakan minta kode baru."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
                 if otp.code == code:
                     user.is_active = True
@@ -296,3 +318,187 @@ def google_token_callback(request):
             "google_client_id": settings.GOOGLE_CLIENT_ID or "",
         },
     )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PASSWORD RESET ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class RequestPasswordResetView(APIView):
+    """
+    POST /api/auth/request-password-reset/
+    Request untuk reset password - kirim email dengan token reset
+    """
+    def post(self, request):
+        serializer = RequestPasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            
+            try:
+                user = User.objects.get(email=email)
+                
+                # Buat token reset password
+                reset_token = PasswordResetToken.objects.create(user=user)
+                
+                # Buat reset URL (sesuaikan dengan deep link Flutter app)
+                # Format: manku://reset-password?token={token}
+                reset_url = f"manku://reset-password?token={reset_token.token}"
+                
+                # Atau jika menggunakan web fallback:
+                # reset_url = f"{request.scheme}://{request.get_host()}/reset-password?token={reset_token.token}"
+                
+                # Kirim email dengan template HTML
+                user_name = user.first_name or user.email.split('@')[0]
+                html_message = get_password_reset_email_template(
+                    user_name, 
+                    reset_url, 
+                    expiry_hours=1
+                )
+                
+                send_mail(
+                    subject="Reset Password Akun ManKu",
+                    message=f"Halo {user_name},\n\nKlik link berikut untuk reset password Anda:\n\n{reset_url}\n\nLink ini berlaku selama 1 jam.\n\nJika Anda tidak meminta reset password, abaikan email ini.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+                return Response(
+                    {
+                        "message": "Email reset password telah dikirim. Silakan cek inbox Anda.",
+                        "email": email,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+                
+            except User.DoesNotExist:
+                # Return success untuk keamanan (tidak expose apakah email terdaftar)
+                return Response(
+                    {
+                        "message": "Jika email terdaftar, instruksi reset password akan dikirim.",
+                    },
+                    status=status.HTTP_200_OK,
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResetPasswordView(APIView):
+    """
+    POST /api/auth/reset-password/
+    Reset password menggunakan token yang diterima via email
+    """
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            token = serializer.validated_data['token']
+            new_password = serializer.validated_data['new_password']
+            
+            try:
+                reset_token = PasswordResetToken.objects.get(token=token)
+                
+                # Validasi token
+                if reset_token.is_used:
+                    return Response(
+                        {"error": "Token ini sudah pernah digunakan."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                
+                if reset_token.is_expired():
+                    return Response(
+                        {"error": "Token sudah kedaluwarsa. Silakan minta reset password baru."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                
+                # Reset password
+                user = reset_token.user
+                user.set_password(new_password)
+                user.save()
+                
+                # Tandai token sebagai sudah dipakai
+                reset_token.is_used = True
+                reset_token.save()
+                
+                # Kirim email konfirmasi
+                user_name = user.first_name or user.email.split('@')[0]
+                html_message = get_password_changed_email_template(user_name)
+                
+                send_mail(
+                    subject="Password ManKu Berhasil Diubah",
+                    message=f"Halo {user_name},\n\nPassword akun ManKu Anda telah berhasil diubah.\n\nJika Anda tidak melakukan perubahan ini, segera hubungi tim support kami.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+                return Response(
+                    {
+                        "message": "Password berhasil diubah! Silakan login dengan password baru Anda.",
+                    },
+                    status=status.HTTP_200_OK,
+                )
+                
+            except PasswordResetToken.DoesNotExist:
+                return Response(
+                    {"error": "Token tidak valid."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResendOTPView(APIView):
+    """
+    POST /api/auth/resend-otp/
+    Kirim ulang kode OTP untuk verifikasi
+    """
+    def post(self, request):
+        serializer = ResendOTPSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            
+            try:
+                user = User.objects.get(email=email)
+                
+                # Cek apakah user sudah aktif
+                if user.is_active:
+                    return Response(
+                        {"error": "Akun sudah diverifikasi. Silakan login."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                
+                # Buat atau update OTP
+                otp, created = OTPVerification.objects.get_or_create(user=user)
+                otp.generate_code(expiry_minutes=10)
+                
+                # Kirim email dengan template HTML
+                user_name = user.first_name or user.email.split('@')[0]
+                html_message = get_otp_email_template(user_name, otp.code, expiry_minutes=10)
+                
+                send_mail(
+                    subject="Kode Verifikasi ManKu - Kirim Ulang",
+                    message=f"Halo {user_name},\n\nKode verifikasi baru Anda adalah: {otp.code}\n\nBerlaku selama 10 menit.\n\nTerima kasih.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+                return Response(
+                    {
+                        "message": "Kode OTP baru telah dikirim ke email Anda.",
+                        "email": email,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+                
+            except User.DoesNotExist:
+                return Response(
+                    {"error": "Email tidak ditemukan."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

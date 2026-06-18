@@ -5,6 +5,9 @@ from .views import (
     LoginView,
     RegisterView,
     VerifyOTPView,
+    RequestPasswordResetView,
+    ResetPasswordView,
+    ResendOTPView,
     google_test_page,
     google_token_callback,
 )
@@ -12,7 +15,10 @@ from .views import (
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
+    path("resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
     path("login/", LoginView.as_view(), name="login"),
+    path("request-password-reset/", RequestPasswordResetView.as_view(), name="request-password-reset"),
+    path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("google-login/", GoogleLoginView.as_view(), name="google-login"),
     # Halaman test untuk mendapatkan id_token Google (hanya DEBUG mode)
     path("google-token-test/", google_test_page, name="google-token-test"),
