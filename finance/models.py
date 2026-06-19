@@ -95,3 +95,141 @@ class SavingsGoal(models.Model):
     @property
     def is_completed(self):
         return self.current_amount >= self.target_amount
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INVESTMENT MODELS (Saham & Crypto)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class Investment(models.Model):
+    """
+    Model untuk menyimpan investasi user (Saham & Crypto)
+    """
+    ASSET_TYPE_CHOICES = (
+        ('stock', 'Saham'),
+        ('crypto', 'Cryptocurrency'),
+    )
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='investments')
+    
+    # Asset info
+    asset_type = models.CharField(max_length=10, choices=ASSET_TYPE_CHOICES)
+    symbol = models.CharField(max_length=20, help_text="Ticker symbol (e.g., BBCA, BTC)")
+    name = models.CharField(max_length=100, help_text="Nama asset (e.g., Bank BCA, Bitcoin)")
+    
+    # Investment data
+    quantity = models.DecimalField(
+        max_digits=20, 
+        decimal_places=8,
+        help_text="Jumlah yang dimiliki (bisa desimal untuk crypto)"
+    )
+    buy_price = models.DecimalField(
+        max_digits=20, 
+        decimal_places=2,
+        help_text="Harga beli rata-rata per unit"
+    )
+    
+    # Metadata
+    purchase_date = models.DateField(help_text="Tanggal pembelian pertama")
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'symbol', 'asset_type')
+    
+    def __str__(self):
+        return f"{self.symbol} - {self.name} ({self.get_asset_type_display()})"
+    
+    @property
+    def total_cost(self):
+        """Total modal yang diinvestasikan"""
+        return self.quantity * self.buy_price
+    
+    def calculate_current_value(self, current_price):
+        """Hitung nilai saat ini"""
+        return float(self.quantity) * float(current_price)
+    
+    def calculate_profit_loss(self, current_price):
+        """Hitung untung/rugi"""
+        current_value = self.calculate_current_value(current_price)
+        return current_value - float(self.total_cost)
+    
+    def calculate_profit_loss_percentage(self, current_price):
+        """Hitung persentase untung/rugi"""
+        if float(self.total_cost) == 0:
+            return 0
+        profit_loss = self.calculate_profit_loss(current_price)
+        return (profit_loss / float(self.total_cost)) * 100
+
+
+class InvestmentTransaction(models.Model):
+    """
+    History transaksi investasi (buy/sell)
+    """
+    TRANSACTION_TYPE_CHOICES = (
+        ('buy', 'Beli'),
+        ('sell', 'Jual'),
+    )
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    investment = models.ForeignKey(
+        Investment, 
+        on_delete=models.CASCADE, 
+        related_name='transactions'
+    )
+    
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES)
+    quantity = models.DecimalField(max_digits=20, decimal_places=8)
+    price = models.DecimalField(max_digits=20, decimal_places=2, help_text="Harga per unit")
+    total_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    
+    transaction_date = models.DateTimeField()
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-transaction_date']
+    
+    def __str__(self):
+        return f"{self.get_transaction_type_display()} {self.quantity} {self.investment.symbol}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate total_amount
+        self.total_amount = self.quantity * self.price
+        super().save(*args, **kwargs)
+
+
+class PriceCache(models.Model):
+    """
+    Cache untuk harga real-time agar tidak terlalu sering hit API
+    """
+    symbol = models.CharField(max_length=20, unique=True)
+    asset_type = models.CharField(max_length=10)
+    
+    current_price = models.DecimalField(max_digits=20, decimal_places=2)
+    price_change_24h = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Perubahan harga 24 jam (%)"
+    )
+    
+    last_updated = models.DateTimeField(auto_now=True)
+    source = models.CharField(max_length=50, default='api')
+    
+    class Meta:
+        verbose_name_plural = "Price Caches"
+    
+    def __str__(self):
+        return f"{self.symbol}: {self.current_price} (updated: {self.last_updated})"
+    
+    @property
+    def is_stale(self):
+        """Cek apakah cache sudah expired (> 5 menit)"""
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() - self.last_updated > timedelta(minutes=5)

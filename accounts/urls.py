@@ -8,6 +8,7 @@ from .views import (
     RequestPasswordResetView,
     ResetPasswordView,
     ResendOTPView,
+    WhatsAppUserLookupView,
     google_test_page,
     google_token_callback,
 )
@@ -24,4 +25,6 @@ urlpatterns = [
     path("google-token-test/", google_test_page, name="google-token-test"),
     # Callback dari Google redirect flow — menerima credential POST dari Google
     path("google-token-callback/", google_token_callback, name="google-token-callback"),
+    # WhatsApp Bot - User lookup by phone number
+    path("whatsapp-user/<str:phone_number>/", WhatsAppUserLookupView.as_view(), name="whatsapp-user-lookup"),
 ]

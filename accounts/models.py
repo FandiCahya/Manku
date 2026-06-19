@@ -56,3 +56,25 @@ class PasswordResetToken(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class WhatsAppUser(models.Model):
+    """Model untuk mapping nomor WhatsApp ke User account"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='whatsapp_account')
+    phone_number = models.CharField(max_length=20, unique=True, help_text="Format: 628xxx (tanpa + atau spasi)")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_interaction = models.DateTimeField(null=True, blank=True)
+    
+    def update_last_interaction(self):
+        """Update timestamp interaksi terakhir"""
+        self.last_interaction = timezone.now()
+        self.save(update_fields=['last_interaction'])
+    
+    def __str__(self):
+        return f"{self.phone_number} -> {self.user.username}"
+    
+    class Meta:
+        verbose_name = "WhatsApp User"
+        verbose_name_plural = "WhatsApp Users"
+        ordering = ['-created_at']

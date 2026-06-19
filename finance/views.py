@@ -449,9 +449,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
         return Response({
             "total_balance": float(total_balance),
+            "total_income": float(income_total),  # All-time income
+            "total_expense": float(expense_total),  # All-time expense
+            "monthly_income": float(monthly_income),  # This month income
+            "monthly_expense": float(monthly_expense),  # This month expense
             "daily_expense": float(daily_expense),
             "budget_left": float(budget_left),
-            "total_income": float(monthly_income),
             "spending_trends": spending_trends,
         }, status=status.HTTP_200_OK)
 
@@ -684,13 +687,21 @@ class TransactionViewSet(viewsets.ModelViewSet):
         today = now.date()
         first_of_month = today.replace(day=1)
 
+        # Total spending & income bulan ini
         total_spending = Transaction.objects.filter(
             user=user,
             category__type="expense",
             transaction_date__date__gte=first_of_month,
         ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        total_income = Transaction.objects.filter(
+            user=user,
+            category__type="income",
+            transaction_date__date__gte=first_of_month,
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        category_data = (
+        # Category breakdown untuk expense
+        expense_category_data = (
             Transaction.objects.filter(
                 user=user,
                 category__type="expense",
@@ -701,17 +712,41 @@ class TransactionViewSet(viewsets.ModelViewSet):
             .order_by("-total")
         )
 
-        category_breakdown = []
+        expense_breakdown = []
         total_float = float(total_spending) if float(total_spending) > 0 else 1.0
-        for cat in category_data:
+        for cat in expense_category_data:
             amount = float(cat["total"])
-            category_breakdown.append({
+            expense_breakdown.append({
                 "name": cat["category__name"],
                 "amount": amount,
                 "count": cat["count"],
                 "percentage": round(amount / total_float, 4),
             })
+        
+        # Category breakdown untuk income
+        income_category_data = (
+            Transaction.objects.filter(
+                user=user,
+                category__type="income",
+                transaction_date__date__gte=first_of_month,
+            )
+            .values("category__name")
+            .annotate(total=Sum("amount"), count=Count("id"))
+            .order_by("-total")
+        )
 
+        income_breakdown = []
+        income_float = float(total_income) if float(total_income) > 0 else 1.0
+        for cat in income_category_data:
+            amount = float(cat["total"])
+            income_breakdown.append({
+                "name": cat["category__name"],
+                "amount": amount,
+                "count": cat["count"],
+                "percentage": round(amount / income_float, 4),
+            })
+
+        # Performance 6 bulan (income dan expense)
         performance_six_months = []
         month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -735,23 +770,39 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 transaction_date__date__gte=month_start,
                 transaction_date__date__lte=month_end,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+            
+            month_income = Transaction.objects.filter(
+                user=user,
+                category__type="income",
+                transaction_date__date__gte=month_start,
+                transaction_date__date__lte=month_end,
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             performance_six_months.append({
                 "month": month_names[target_month - 1],
                 "year": target_year,
-                "amount": float(month_expense),
+                "expense": float(month_expense),
+                "income": float(month_income),
+                "net": float(month_income - month_expense),
                 "is_current": i == 0,
             })
 
-        max_amount = max((m["amount"] for m in performance_six_months), default=1.0)
-        if max_amount == 0:
-            max_amount = 1.0
+        max_expense = max((m["expense"] for m in performance_six_months), default=1.0)
+        max_income = max((m["income"] for m in performance_six_months), default=1.0)
+        if max_expense == 0:
+            max_expense = 1.0
+        if max_income == 0:
+            max_income = 1.0
 
         return Response({
             "total_spending": float(total_spending),
-            "category_breakdown": category_breakdown,
+            "total_income": float(total_income),
+            "net_income": float(total_income - total_spending),
+            "expense_breakdown": expense_breakdown,
+            "income_breakdown": income_breakdown,
             "performance_six_months": performance_six_months,
-            "performance_max_amount": max_amount,
+            "performance_max_expense": max_expense,
+            "performance_max_income": max_income,
         }, status=status.HTTP_200_OK)
 
     # =========================================================================

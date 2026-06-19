@@ -502,3 +502,59 @@ class ResendOTPView(APIView):
                 )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WHATSAPP BOT ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class WhatsAppUserLookupView(APIView):
+    """
+    GET /api/auth/whatsapp-user/<phone_number>/
+    Lookup user by WhatsApp phone number and return token for bot authentication
+    """
+    def get(self, request, phone_number):
+        from .models import WhatsAppUser
+        
+        try:
+            wa_user = WhatsAppUser.objects.select_related('user').get(
+                phone_number=phone_number,
+                is_active=True
+            )
+            
+            # Update last interaction
+            wa_user.update_last_interaction()
+            
+            # Generate token for bot
+            tokens = get_tokens_for_user(wa_user.user)
+            
+            return Response(
+                {
+                    "success": True,
+                    "username": wa_user.user.username,
+                    "email": wa_user.user.email,
+                    "name": wa_user.user.get_full_name() or wa_user.user.first_name,
+                    "token": tokens['access'],
+                    "refresh": tokens['refresh'],
+                },
+                status=status.HTTP_200_OK,
+            )
+            
+        except WhatsAppUser.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "error": "Nomor WhatsApp tidak terdaftar."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "success": False,
+                    "error": str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
