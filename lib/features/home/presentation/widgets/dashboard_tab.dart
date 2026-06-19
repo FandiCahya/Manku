@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/animated_widgets.dart';
 import '../../../../widgets/balance_card.dart';
 import '../../../../widgets/monthly_balance_gauge.dart';
 import '../../../../widgets/goals_progress_card.dart';
@@ -60,33 +61,48 @@ class _DashboardTabState extends State<DashboardTab> with AutomaticKeepAliveClie
                   child: Column(
                     spacing: 32,
                     children: [
-                      BalanceCard(
-                        totalBalance: dashboard?.totalBalance,
-                        isLoading: isLoading,
-                        onAddTransaction: () => _showAddSheet(context),
+                      FadeInDown(
+                        delay: const Duration(milliseconds: 100),
+                        child: BalanceCard(
+                          totalBalance: dashboard?.totalBalance,
+                          isLoading: isLoading,
+                          onAddTransaction: () => _showAddSheet(context),
+                        ),
                       ),
-                      MonthlyBalanceGauge(
-                        totalIncome: dashboard?.totalIncome,
-                        totalExpense: dashboard?.totalExpense,
-                        isLoading: isLoading,
+                      FadeInUp(
+                        delay: const Duration(milliseconds: 200),
+                        child: MonthlyBalanceGauge(
+                          totalIncome: dashboard?.totalIncome,
+                          totalExpense: dashboard?.totalExpense,
+                          isLoading: isLoading,
+                        ),
                       ),
-                      GoalsProgressCard(
-                        isLoading: isLoading,
-                        onTap: () {
-                          // Navigate to goals page (profile tab 2)
-                          DefaultTabController.of(context).animateTo(3); // Profile tab
-                        },
+                      ScaleIn(
+                        delay: const Duration(milliseconds: 300),
+                        child: GoalsProgressCard(
+                          isLoading: isLoading,
+                          onTap: () {
+                            // Navigate to goals page (profile tab 2)
+                            DefaultTabController.of(context).animateTo(3); // Profile tab
+                          },
+                        ),
                       ),
-                      StatsGrid(
-                        dailyExpense: dashboard?.dailyExpense,
-                        totalExpense: dashboard?.totalExpense,
-                        monthlyBalance: dashboard?.monthlyBalance,
-                        isLoading: isLoading,
+                      SlideInLeft(
+                        delay: const Duration(milliseconds: 400),
+                        child: StatsGrid(
+                          dailyExpense: dashboard?.dailyExpense,
+                          totalExpense: dashboard?.totalExpense,
+                          monthlyBalance: dashboard?.monthlyBalance,
+                          isLoading: isLoading,
+                        ),
                       ),
-                      SpendingTrendsChart(
-                        trends: dashboard?.spendingTrends,
-                        maxAmount: dashboard?.maxTrendAmount ?? 1.0,
-                        isLoading: isLoading,
+                      FadeInUp(
+                        delay: const Duration(milliseconds: 500),
+                        child: SpendingTrendsChart(
+                          trends: dashboard?.spendingTrends,
+                          maxAmount: dashboard?.maxTrendAmount ?? 1.0,
+                          isLoading: isLoading,
+                        ),
                       ),
                       if (error != null)
                         ErrorBanner(

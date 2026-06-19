@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/constants/colors.dart';
+import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/localization/language_provider.dart';
 import '../../../theme/presentation/cubit/theme_cubit.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -18,9 +21,11 @@ class ProfileTab extends StatefulWidget {
 class _ProfileTabState extends State<ProfileTab> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final themeMode = context.watch<ThemeCubit>().state;
     final isDarkMode = themeMode == ThemeMode.dark ||
         (themeMode == ThemeMode.system && MediaQuery.of(context).platformBrightness == Brightness.dark);
+    final languageProvider = context.watch<LanguageProvider>();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -28,7 +33,7 @@ class _ProfileTabState extends State<ProfileTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Pengaturan',
+            l10n.translate('settings'),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -37,12 +42,12 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 12),
           SettingItemTile(
-            title: 'Pengaturan Akun',
+            title: l10n.translate('account_settings'),
             icon: Icons.security,
             color: context.colors.primary,
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Pengaturan Akun')),
+                SnackBar(content: Text(l10n.translate('account_settings'))),
               );
             },
           ),
@@ -58,18 +63,22 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 10),
           SettingItemTile(
-            title: 'Notifikasi',
-            icon: Icons.notifications_outlined,
-            color: Colors.orange,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifikasi')),
-              );
-            },
+            title: l10n.translate('language'),
+            icon: Icons.language,
+            color: Colors.purple,
+            trailing: Text(
+              languageProvider.isEnglish ? 'English' : 'Bahasa',
+              style: TextStyle(
+                color: context.colors.onSurfaceVariant,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onTap: () => _showLanguageDialog(context),
           ),
           const SizedBox(height: 10),
           SettingItemTile(
-            title: 'Tentang Aplikasi',
+            title: l10n.translate('about_app'),
             icon: Icons.info_outline,
             color: Colors.teal,
             onTap: () {
@@ -83,9 +92,9 @@ class _ProfileTabState extends State<ProfileTab> {
             width: double.infinity,
             child: ElevatedButton.icon(
               icon: const Icon(Icons.logout),
-              label: const Text(
-                'Logout',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              label: Text(
+                l10n.translate('logout'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               onPressed: () => _showLogoutDialog(context),
               style: ElevatedButton.styleFrom(
@@ -104,19 +113,63 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLanguageDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final languageProvider = context.read<LanguageProvider>();
+    
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: const Text('Logout?'),
-        content: const Text('Kamu akan keluar dari akun ini.'),
+        title: Text(l10n.translate('select_language')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Text('🇬🇧', style: TextStyle(fontSize: 24)),
+              title: Text(l10n.translate('english')),
+              trailing: languageProvider.isEnglish 
+                  ? const Icon(Icons.check_circle, color: Colors.green)
+                  : null,
+              onTap: () {
+                languageProvider.setLanguage('en');
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: const Text('🇮🇩', style: TextStyle(fontSize: 24)),
+              title: Text(l10n.translate('indonesian')),
+              trailing: languageProvider.isIndonesian 
+                  ? const Icon(Icons.check_circle, color: Colors.green)
+                  : null,
+              onTap: () {
+                languageProvider.setLanguage('id');
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(l10n.translate('logout_confirmation')),
+        content: Text(l10n.translate('logout_message')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: Text(l10n.translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -127,7 +180,7 @@ class _ProfileTabState extends State<ProfileTab> {
               backgroundColor: Colors.red.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Logout'),
+            child: Text(l10n.translate('logout')),
           ),
         ],
       ),
@@ -142,12 +195,14 @@ class SettingItemTile extends StatelessWidget {
     required this.color,
     required this.onTap,
     super.key,
+    this.trailing,
   });
 
   final String title;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +232,7 @@ class SettingItemTile extends StatelessWidget {
           title,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
-        trailing: Icon(
+        trailing: trailing ?? Icon(
           Icons.arrow_forward_ios,
           size: 14,
           color: context.colors.outlineVariant,

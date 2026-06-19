@@ -13,12 +13,14 @@ class ApiConfig {
   static String get googleLoginEndpoint   => '$baseUrl/api/auth/google-login/';
 
   // ── Transactions ──────────────────────────────────────────────────────────
-  static String get saveTransactionEndpoint   => '$baseUrl/api/transactions/save-transaction/';
-  static String get saveChatTransactionEndpoint => '$baseUrl/api/transactions/chat-input/';
-  static String get chatInputEndpoint         => '$baseUrl/api/transactions/chat-input/';
-  static String get dashboardSummaryEndpoint  => '$baseUrl/api/transactions/dashboard-summary/';
-  static String get transactionHistoryEndpoint=> '$baseUrl/api/transactions/history/';
-  static String get reportSummaryEndpoint     => '$baseUrl/api/transactions/report-summary/';
+  static String get saveTransactionEndpoint      => '$baseUrl/api/transactions/save-transaction/';
+  static String get saveChatTransactionEndpoint  => '$baseUrl/api/transactions/chat-input/';
+  static String get chatInputEndpoint            => '$baseUrl/api/transactions/chat-input/';
+  /// Flat list endpoint — returns List<Transaction> with category_type field
+  static String get transactionListEndpoint      => '$baseUrl/api/transactions/';
+  static String get dashboardSummaryEndpoint     => '$baseUrl/api/transactions/dashboard-summary/';
+  static String get transactionHistoryEndpoint   => '$baseUrl/api/transactions/history/';
+  static String get reportSummaryEndpoint        => '$baseUrl/api/transactions/report-summary/';
   static String updateTransactionEndpoint(String id) => '$baseUrl/api/transactions/$id/';
   static String deleteTransactionEndpoint(String id) => '$baseUrl/api/transactions/$id/';
 

@@ -120,7 +120,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Tujuan Keuangan',
+                              'Financial Goals',
                               style: GoogleFonts.nunito(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 16,

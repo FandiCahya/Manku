@@ -17,14 +17,19 @@ class ApiTransaction {
     required this.inputSource,
   });
 
-  bool get isIncome => categoryType == 'income';
+  bool get isIncome => categoryType.toLowerCase().trim() == 'income';
 
   factory ApiTransaction.fromJson(Map<String, dynamic> json) {
+    // API may return type under different key names — try all variants
+    final rawType = (json['category_type'] as String?)
+        ?? (json['transaction_type'] as String?)
+        ?? (json['type'] as String?)
+        ?? 'expense';
     return ApiTransaction(
-      id: json['id'] as String,
+      id: (json['id'] ?? '').toString(),
       description: json['description'] as String? ?? '',
       categoryName: json['category_name'] as String? ?? 'Lainnya',
-      categoryType: json['category_type'] as String? ?? 'expense',
+      categoryType: rawType.toLowerCase().trim(), // normalise to lowercase
       amount: (json['amount'] as num).toDouble(),
       time: json['time'] as String? ?? '',
       inputSource: json['input_source'] as String? ?? 'manual',

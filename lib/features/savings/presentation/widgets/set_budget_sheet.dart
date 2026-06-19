@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../domain/budget_models.dart';
 import '../cubit/savings_cubit.dart';
 
@@ -41,6 +42,7 @@ class _SetBudgetSheetState extends State<SetBudgetSheet> {
   }
 
   void _submit() {
+    final l10n = AppLocalizations.of(context);
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(
       _amountCtrl.text.replaceAll('.', '').replaceAll(',', ''),
@@ -48,8 +50,8 @@ class _SetBudgetSheetState extends State<SetBudgetSheet> {
 
     if ((name.isEmpty && !_isEditing) || amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nama tujuan & target wajib diisi'),
+        SnackBar(
+          content: Text(l10n.translate('name_and_amount_required')),
         ),
       );
       return;
@@ -122,11 +124,13 @@ class _SheetTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isEditing ? 'Edit Tujuan' : 'Tambah Tujuan Baru',
+          isEditing ? l10n.translate('edit_goal') : l10n.translate('add_new_goal'),
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -136,8 +140,8 @@ class _SheetTitle extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           isEditing
-              ? 'Update tujuan "${existing!.categoryName}"'
-              : 'Buat tujuan tabungan baru',
+              ? l10n.translate('update_goal_name').replaceAll('{name}', existing!.categoryName)
+              : l10n.translate('create_new_savings_goal'),
           style: TextStyle(fontSize: 13, color: context.colors.onSurfaceVariant),
         ),
       ],
@@ -156,11 +160,13 @@ class _CategoryField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return TextField(
       controller: controller,
       enabled: !isEditing,
       decoration: InputDecoration(
-        hintText: 'Nama Tujuan (contoh: Beli Rumah)',
+        hintText: l10n.translate('goal_name_hint'),
         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
         prefixIcon: Icon(Icons.flag_outlined,
             color: context.colors.primary, size: 20),
@@ -195,11 +201,13 @@ class _AmountField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return TextField(
       controller: controller,
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
-        hintText: 'Target Nominal (Rp)',
+        hintText: l10n.translate('target_amount_hint'),
         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
         prefixIcon: Icon(Icons.savings_outlined,
             color: context.colors.primary, size: 20),
@@ -232,6 +240,8 @@ class _MonthInfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -244,7 +254,7 @@ class _MonthInfoChip extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Tujuan ini tidak akan reset setiap bulan',
+              l10n.translate('goal_info'),
               style: TextStyle(
                 fontSize: 12,
                 color: context.colors.onSurfaceVariant,
@@ -268,6 +278,8 @@ class _SubmitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -282,7 +294,7 @@ class _SubmitButton extends StatelessWidget {
           elevation: 0,
         ),
         child: Text(
-          isEditing ? 'Update Tujuan' : 'Simpan Tujuan',
+          isEditing ? l10n.translate('update_goal') : l10n.translate('save_goal'),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),

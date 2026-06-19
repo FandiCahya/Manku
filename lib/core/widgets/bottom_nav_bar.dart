@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../localization/app_localizations.dart';
 import 'nav_bar_item.dart';
 
 class BottomNavBar extends StatefulWidget {
@@ -50,6 +51,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
@@ -77,7 +79,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
               Expanded(
                 child: NavBarItem(
                   icon: Icons.dashboard_rounded,
-                  label: 'Home',
+                  label: l10n.translate('nav_home'),
                   isSelected: selectedIndex == 0,
                   onTap: () {
                     setState(() => selectedIndex = 0);
@@ -88,7 +90,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
               Expanded(
                 child: NavBarItem(
                   icon: Icons.history_rounded,
-                  label: 'History',
+                  label: l10n.translate('nav_history'),
                   isSelected: selectedIndex == 1,
                   onTap: () {
                     setState(() => selectedIndex = 1);
@@ -138,7 +140,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Add',
+                        l10n.translate('nav_add'),
                         style: TextStyle(
                           color: isDark ? Colors.white : context.colors.primary,
                           fontSize: 10,
@@ -152,7 +154,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
               Expanded(
                 child: NavBarItem(
                   icon: Icons.analytics_rounded,
-                  label: 'Reports',
+                  label: l10n.translate('nav_reports'),
                   isSelected: selectedIndex == 2,
                   onTap: () {
                     setState(() => selectedIndex = 2);
@@ -163,7 +165,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
               Expanded(
                 child: NavBarItem(
                   icon: Icons.person_rounded,
-                  label: 'Profile',
+                  label: l10n.translate('nav_profile'),
                   isSelected: selectedIndex == 3,
                   onTap: () {
                     setState(() => selectedIndex = 3);

@@ -8,7 +8,6 @@ import 'dart:convert';
 import '../core/constants/colors.dart';
 import '../features/transactions/presentation/cubit/transaction_cubit.dart';
 
-
 class ChatTransactionInput extends StatefulWidget {
   final VoidCallback? onTransactionSaved;
 
@@ -23,7 +22,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
   final List<ChatMessage> messages = [];
   bool isLoading = false;
   static const String _chatHistoryKey = 'chat_transaction_history';
-  
+
   final ImagePicker _imagePicker = ImagePicker();
   late stt.SpeechToText _speech;
   bool _isListening = false;
@@ -50,7 +49,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
       setState(() {});
       return;
     }
-    
+
     _speech = stt.SpeechToText();
     _speechAvailable = await _speech.initialize(
       onError: (error) => debugPrint('Speech error: $error'),
@@ -63,13 +62,18 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final historyJson = prefs.getString(_chatHistoryKey);
-      
+
       if (historyJson != null) {
-        final List<dynamic> historyList = json.decode(historyJson);
+        final decoded = json.decode(historyJson);
+        final List<dynamic> historyList = decoded as List<dynamic>;
         setState(() {
           messages.clear();
           messages.addAll(
-            historyList.map((item) => ChatMessage.fromJson(item)).toList()
+            historyList
+                .map(
+                  (item) => ChatMessage.fromJson(item as Map<String, dynamic>),
+                )
+                .toList(),
           );
         });
       }
@@ -82,7 +86,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final historyJson = json.encode(
-        messages.map((msg) => msg.toJson()).toList()
+        messages.map((msg) => msg.toJson()).toList(),
       );
       await prefs.setString(_chatHistoryKey, historyJson);
     } catch (e) {
@@ -98,9 +102,9 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
         messages.clear();
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Riwayat chat dihapus')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Riwayat chat dihapus')));
       }
     } catch (e) {
       debugPrint('Error clearing chat history: $e');
@@ -133,12 +137,13 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
         // TODO: Process image with OCR API
         // For now, show placeholder response
         await Future.delayed(const Duration(seconds: 1));
-        
+
         setState(() {
           isLoading = false;
           messages.add(
             ChatMessage(
-              text: 'Maaf, fitur pemrosesan gambar sedang dalam pengembangan.\n\nSilakan gunakan input teks untuk sementara.',
+              text:
+                  'Maaf, fitur pemrosesan gambar sedang dalam pengembangan.\n\nSilakan gunakan input teks untuk sementara.',
               isUser: false,
               timestamp: DateTime.now(),
             ),
@@ -177,36 +182,40 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
       setState(() => _isListening = false);
     } else {
       setState(() => _isListening = true);
-      
-      bool available = await _speech.listen(
-        onResult: (result) {
-          setState(() {
-            textController.text = result.recognizedWords;
-            if (result.finalResult) {
-              _isListening = false;
-            }
-          });
-        },
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        localeId: 'id_ID', // Indonesian language
-        onSoundLevelChange: (level) => debugPrint('Sound level: $level'),
-      );
 
-      if (!available && mounted) {
-        setState(() => _isListening = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tidak dapat memulai pengenalan suara. Periksa izin mikrofon.'),
-          ),
+      try {
+        await _speech.listen(
+          onResult: (result) {
+            setState(() {
+              textController.text = result.recognizedWords;
+              if (result.finalResult) {
+                _isListening = false;
+              }
+            });
+          },
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 3),
+          localeId: 'id_ID', // Indonesian language
+          onSoundLevelChange: (level) => debugPrint('Sound level: $level'),
         );
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isListening = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Tidak dapat memulai pengenalan suara. Periksa izin mikrofon.',
+              ),
+            ),
+          );
+        }
       }
     }
   }
 
   void _showImageSourceDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -278,11 +287,11 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
     if (input.isEmpty) return;
 
     final userMessage = ChatMessage(
-      text: input, 
-      isUser: true, 
-      timestamp: DateTime.now()
+      text: input,
+      isUser: true,
+      timestamp: DateTime.now(),
     );
-    
+
     setState(() {
       messages.add(userMessage);
       isLoading = true;
@@ -292,7 +301,9 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
     await _saveChatHistory();
 
     try {
-      final data = await context.read<TransactionCubit>().addChatTransaction(input);
+      final data = await context.read<TransactionCubit>().addChatTransaction(
+        input,
+      );
       if (!mounted) return;
 
       if (data != null) {
@@ -303,20 +314,20 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             final now = DateTime.now();
             final timeStr =
                 '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-            
+
             String dateStr = '${now.day}/${now.month}/${now.year}';
             if (extracted.date != null) {
-               final parts = extracted.date!.split('-');
-               if (parts.length == 3) {
-                  dateStr = '${parts[2]}/${parts[1]}/${parts[0]}';
-               }
+              final parts = extracted.date!.split('-');
+              if (parts.length == 3) {
+                dateStr = '${parts[2]}/${parts[1]}/${parts[0]}';
+              }
             }
 
             final parsed = {
-               'amount': extracted.amount!.toStringAsFixed(0),
-               'category': extracted.categoryHint ?? 'Other',
-               'description': extracted.description ?? '',
-               'type': extracted.type ?? 'expense',
+              'amount': extracted.amount!.toStringAsFixed(0),
+              'category': extracted.categoryHint ?? 'Other',
+              'description': extracted.description ?? '',
+              'type': extracted.type ?? 'expense',
             };
 
             messages.add(
@@ -331,7 +342,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             // Notify parent to refresh data
             widget.onTransactionSaved?.call();
           } else {
-             messages.add(
+            messages.add(
               ChatMessage(
                 text:
                     'Maaf, saya tidak menemukan nominal. Coba seperti ini:\n"Saya beli kopi 25000"',
@@ -343,11 +354,12 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
           _saveChatHistory();
         });
       } else {
-         setState(() {
+        setState(() {
           isLoading = false;
           messages.add(
             ChatMessage(
-              text: 'Maaf, terjadi kesalahan pada server atau data tidak valid.',
+              text:
+                  'Maaf, terjadi kesalahan pada server atau data tidak valid.',
               isUser: false,
               timestamp: DateTime.now(),
             ),
@@ -361,7 +373,8 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
         isLoading = false;
         messages.add(
           ChatMessage(
-            text: 'Maaf, gagal terhubung ke server.\nPastikan server sudah berjalan.\nError: ${e.toString()}',
+            text:
+                'Maaf, gagal terhubung ke server.\nPastikan server sudah berjalan.\nError: ${e.toString()}',
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -374,10 +387,12 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1D3448) : context.colors.surfaceContainerLow,
+        color: isDark
+            ? const Color(0xFF1D3448)
+            : context.colors.surfaceContainerLow,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
@@ -406,7 +421,9 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Hapus Riwayat Chat?'),
-                          content: const Text('Semua pesan chat akan dihapus. Lanjutkan?'),
+                          content: const Text(
+                            'Semua pesan chat akan dihapus. Lanjutkan?',
+                          ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx),
@@ -433,9 +450,9 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             ),
           ),
           Divider(
-            color: isDark 
-                ? const Color(0xFF2A4A62) 
-                : context.colors.outlineVariant.withOpacity(0.3)
+            color: isDark
+                ? const Color(0xFF2A4A62)
+                : context.colors.outlineVariant.withOpacity(0.3),
           ),
           // Chat messages
           Expanded(
@@ -449,8 +466,8 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                         Text(
                           'Mulai dengan menceritakan transaksimu',
                           style: TextStyle(
-                            color: isDark 
-                                ? Colors.white70 
+                            color: isDark
+                                ? Colors.white70
                                 : context.colors.onSurfaceVariant,
                             fontSize: 14,
                           ),
@@ -459,9 +476,11 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                         Text(
                           'Contoh: "Saya beli kopi 25000"',
                           style: TextStyle(
-                            color: isDark 
-                                ? Colors.white54 
-                                : context.colors.onSurfaceVariant.withOpacity(0.6),
+                            color: isDark
+                                ? Colors.white54
+                                : context.colors.onSurfaceVariant.withOpacity(
+                                    0.6,
+                                  ),
                             fontSize: 12,
                           ),
                         ),
@@ -480,9 +499,11 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: (isDark 
-                                      ? const Color(0xFF2C5F87) 
-                                      : context.colors.primaryContainer).withOpacity(0.3),
+                                  color:
+                                      (isDark
+                                              ? const Color(0xFF2C5F87)
+                                              : context.colors.primaryContainer)
+                                          .withOpacity(0.3),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: SizedBox(
@@ -491,8 +512,8 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation(
-                                      isDark 
-                                          ? Colors.white 
+                                      isDark
+                                          ? Colors.white
                                           : const Color(0xFF2c5f87),
                                     ),
                                   ),
@@ -513,8 +534,10 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0F1A24) : null,
-              border: isDark 
-                  ? Border(top: BorderSide(color: const Color(0xFF2A4A62), width: 1))
+              border: isDark
+                  ? Border(
+                      top: BorderSide(color: const Color(0xFF2A4A62), width: 1),
+                    )
                   : null,
             ),
             child: Row(
@@ -522,39 +545,38 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                 IconButton(
                   onPressed: _showImageSourceDialog,
                   icon: Icon(
-                    Icons.image_outlined, 
-                    color: isDark ? Colors.white70 : context.colors.secondary
+                    Icons.image_outlined,
+                    color: isDark ? Colors.white70 : context.colors.secondary,
                   ),
-                  tooltip: kIsWeb 
-                      ? 'Upload File Struk' 
-                      : 'Upload Receipt',
+                  tooltip: kIsWeb ? 'Upload File Struk' : 'Upload Receipt',
                 ),
                 IconButton(
-                  onPressed: kIsWeb 
-                      ? null  // Disable untuk web
+                  onPressed: kIsWeb
+                      ? null // Disable untuk web
                       : _toggleListening,
                   icon: Icon(
                     _isListening ? Icons.mic : Icons.mic_none,
-                    color: _isListening 
-                        ? Colors.red 
-                        : (kIsWeb 
-                            ? Colors.grey  // Grey untuk disabled
-                            : (isDark ? Colors.white70 : context.colors.secondary)),
+                    color: _isListening
+                        ? Colors.red
+                        : (kIsWeb
+                              ? Colors
+                                    .grey // Grey untuk disabled
+                              : (isDark
+                                    ? Colors.white70
+                                    : context.colors.secondary)),
                   ),
-                  tooltip: kIsWeb 
-                      ? 'Voice input tidak tersedia di web' 
+                  tooltip: kIsWeb
+                      ? 'Voice input tidak tersedia di web'
                       : 'Voice Input',
                 ),
                 Expanded(
                   child: TextField(
                     controller: textController,
                     onSubmitted: (_) => _sendMessage(),
-                    style: TextStyle(
-                      color: isDark ? Colors.white : null,
-                    ),
+                    style: TextStyle(color: isDark ? Colors.white : null),
                     decoration: InputDecoration(
-                      hintText: _isListening 
-                          ? 'Mendengarkan...' 
+                      hintText: _isListening
+                          ? 'Mendengarkan...'
                           : 'Cth: "Beli kopi 25000"',
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -565,15 +587,17 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: isDark 
-                          ? const Color(0xFF2A4A62) 
+                      fillColor: isDark
+                          ? const Color(0xFF2A4A62)
                           : context.colors.surfaceContainer,
                       hintStyle: TextStyle(
                         color: _isListening
                             ? Colors.red.shade300
-                            : (isDark 
-                                ? Colors.white38 
-                                : context.colors.onSurfaceVariant.withOpacity(0.5)),
+                            : (isDark
+                                  ? Colors.white38
+                                  : context.colors.onSurfaceVariant.withOpacity(
+                                      0.5,
+                                    )),
                       ),
                     ),
                   ),
@@ -581,16 +605,16 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                 const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: isDark 
-                        ? const Color(0xFF2C5F87) 
+                    color: isDark
+                        ? const Color(0xFF2C5F87)
                         : context.colors.primary,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
                     onPressed: _sendMessage,
                     icon: Icon(
-                      Icons.send, 
-                      color: isDark ? Colors.white : context.colors.onPrimary
+                      Icons.send,
+                      color: isDark ? Colors.white : context.colors.onPrimary,
                     ),
                   ),
                 ),
@@ -604,7 +628,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
 
   Widget _buildMessageBubble(ChatMessage message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     if (message.isUser) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
@@ -618,8 +642,8 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: isDark 
-                      ? const Color(0xFF2C5F87) 
+                  color: isDark
+                      ? const Color(0xFF2C5F87)
                       : context.colors.primary,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
@@ -630,10 +654,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                 ),
                 child: Text(
                   message.text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ),
@@ -649,8 +670,8 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark 
-                    ? const Color(0xFF0F1A24) 
+                color: isDark
+                    ? const Color(0xFF0F1A24)
                     : context.colors.primaryContainer.withOpacity(0.2),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
@@ -671,7 +692,10 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             if (message.isParsed) ...[
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF2e7d32).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -682,7 +706,11 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle, size: 14, color: Color(0xFF2e7d32)),
+                    Icon(
+                      Icons.check_circle,
+                      size: 14,
+                      color: Color(0xFF2e7d32),
+                    ),
                     SizedBox(width: 5),
                     Text(
                       'Tersimpan otomatis',

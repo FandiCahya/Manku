@@ -123,7 +123,7 @@ class _MonthlyBalanceGaugeState extends State<MonthlyBalanceGauge>
               ),
               const SizedBox(width: 10),
               Text(
-                'Saldo Bulan Ini',
+                'Monthly Balance',
                 style: GoogleFonts.nunito(
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
@@ -139,7 +139,7 @@ class _MonthlyBalanceGaugeState extends State<MonthlyBalanceGauge>
                   borderRadius: BorderRadius.circular(50),
                 ),
                 child: Text(
-                  balance >= 0 ? 'Surplus' : 'Defisit',
+                  balance >= 0 ? 'Surplus' : 'Deficit',
                   style: GoogleFonts.nunito(
                     color: trackColor,
                     fontWeight: FontWeight.w900,
@@ -182,7 +182,7 @@ class _MonthlyBalanceGaugeState extends State<MonthlyBalanceGauge>
                                   ),
                                 ),
                                 Text(
-                                  'saldo',
+                                  'balance',
                                   style: GoogleFonts.nunito(
                                     fontSize: 10,
                                     color: isDark ? Colors.white70 : context.colors.onSurfaceVariant,
@@ -202,14 +202,14 @@ class _MonthlyBalanceGaugeState extends State<MonthlyBalanceGauge>
                 child: Column(
                   children: [
                     _StatRow(
-                      label: 'Pemasukan',
+                      label: 'Income',
                       value: _formatCompact(widget.totalIncome ?? 0),
                       color: context.colors.mint,
                       icon: Icons.arrow_upward_rounded,
                     ),
                     const SizedBox(height: 12),
                     _StatRow(
-                      label: 'Pengeluaran',
+                      label: 'Expense',
                       value: _formatCompact(widget.totalExpense ?? 0),
                       color: context.colors.coral,
                       icon: Icons.arrow_downward_rounded,

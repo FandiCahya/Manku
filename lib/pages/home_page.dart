@@ -17,7 +17,6 @@ import '../widgets/chat_transaction_input.dart';
 import '../widgets/transaction_input_form.dart';
 import 'profile_page.dart';
 
-
 class HomePage extends StatefulWidget {
   HomePage({Key? key}) : super(key: key);
 
@@ -66,9 +65,17 @@ class _HomePageState extends State<HomePage> {
     });
     try {
       final data = await TransactionService.fetchDashboardSummary();
-      if (mounted) setState(() { _dashboard = data; _dashboardLoading = false; });
+      if (mounted)
+        setState(() {
+          _dashboard = data;
+          _dashboardLoading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _dashboardError = e.toString(); _dashboardLoading = false; });
+      if (mounted)
+        setState(() {
+          _dashboardError = e.toString();
+          _dashboardLoading = false;
+        });
     }
   }
 
@@ -79,9 +86,17 @@ class _HomePageState extends State<HomePage> {
     });
     try {
       final data = await TransactionService.fetchHistory();
-      if (mounted) setState(() { _history = data; _historyLoading = false; });
+      if (mounted)
+        setState(() {
+          _history = data;
+          _historyLoading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _historyError = e.toString(); _historyLoading = false; });
+      if (mounted)
+        setState(() {
+          _historyError = e.toString();
+          _historyLoading = false;
+        });
     }
   }
 
@@ -92,9 +107,17 @@ class _HomePageState extends State<HomePage> {
     });
     try {
       final data = await TransactionService.fetchReportSummary();
-      if (mounted) setState(() { _report = data; _reportLoading = false; });
+      if (mounted)
+        setState(() {
+          _report = data;
+          _reportLoading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _reportError = e.toString(); _reportLoading = false; });
+      if (mounted)
+        setState(() {
+          _reportError = e.toString();
+          _reportLoading = false;
+        });
     }
   }
 
@@ -137,7 +160,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
   // ── DASHBOARD ──────────────────────────────────────────────────────────
   Widget _buildDashboardContent() {
     return Column(
@@ -149,7 +171,11 @@ class _HomePageState extends State<HomePage> {
             child: SingleChildScrollView(
               physics: AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.only(
-                left: 24, right: 24, top: 24, bottom: 100),
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: 100,
+              ),
               child: Column(
                 spacing: 32,
                 children: [
@@ -159,8 +185,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                   StatsGrid(
                     dailyExpense: _dashboard?.dailyExpense,
-                    budgetLeft: _dashboard?.budgetLeft,
                     totalIncome: _dashboard?.totalIncome,
+                    totalExpense: _dashboard?.totalExpense,
+                    monthlyBalance: _dashboard?.monthlyBalance,
                     isLoading: _dashboardLoading,
                   ),
                   SpendingTrendsChart(
@@ -187,20 +214,23 @@ class _HomePageState extends State<HomePage> {
     // Filter berdasarkan search query
     final filteredGroups = _searchQuery.isEmpty
         ? groups
-        : groups.map((g) {
-            final filteredTxns = g.transactions.where((t) {
-              final q = _searchQuery.toLowerCase();
-              return t.description.toLowerCase().contains(q) ||
-                  t.categoryName.toLowerCase().contains(q);
-            }).toList();
-            return filteredTxns.isEmpty
-                ? null
-                : TransactionGroup(
-                    dateLabel: g.dateLabel,
-                    date: g.date,
-                    transactions: filteredTxns,
-                  );
-          }).whereType<TransactionGroup>().toList();
+        : groups
+              .map((g) {
+                final filteredTxns = g.transactions.where((t) {
+                  final q = _searchQuery.toLowerCase();
+                  return t.description.toLowerCase().contains(q) ||
+                      t.categoryName.toLowerCase().contains(q);
+                }).toList();
+                return filteredTxns.isEmpty
+                    ? null
+                    : TransactionGroup(
+                        dateLabel: g.dateLabel,
+                        date: g.date,
+                        transactions: filteredTxns,
+                      );
+              })
+              .whereType<TransactionGroup>()
+              .toList();
 
     return SafeArea(
       child: RefreshIndicator(
@@ -281,7 +311,9 @@ class _HomePageState extends State<HomePage> {
     final bgColor = isIncome
         ? Colors.green.shade50
         : _bgColorForCategory(txn.categoryName);
-    final iconColor = isIncome ? Colors.green : _iconColorForCategory(txn.categoryName);
+    final iconColor = isIncome
+        ? Colors.green
+        : _iconColorForCategory(txn.categoryName);
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
@@ -334,10 +366,7 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${isIncome ? '+' : '-'}Rp ${txn.amount.toStringAsFixed(0).replaceAllMapped(
-                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                      (m) => '${m[1]}.',
-                    )}',
+                '${isIncome ? '+' : '-'}Rp ${txn.amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -366,7 +395,11 @@ class _HomePageState extends State<HomePage> {
         padding: EdgeInsets.all(48),
         child: Column(
           children: [
-            Icon(Icons.receipt_long, size: 64, color: context.colors.outlineVariant),
+            Icon(
+              Icons.receipt_long,
+              size: 64,
+              color: context.colors.outlineVariant,
+            ),
             SizedBox(height: 16),
             Text(
               'Belum ada transaksi',
@@ -467,10 +500,11 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: (_isFormMode
-                            ? context.colors.primary
-                            : context.colors.secondary)
-                        .withOpacity(0.2),
+                    color:
+                        (_isFormMode
+                                ? context.colors.primary
+                                : context.colors.secondary)
+                            .withOpacity(0.2),
                     blurRadius: 8,
                     offset: Offset(0, 2),
                   ),
@@ -540,7 +574,6 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildProfileContent() => ProfilePage();
 
-
   Widget _buildErrorBanner(String error, VoidCallback onRetry) {
     return Container(
       padding: EdgeInsets.all(16),
@@ -559,10 +592,7 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(color: Colors.red.shade700, fontSize: 13),
             ),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: Text('Retry'),
-          ),
+          TextButton(onPressed: onRetry, child: Text('Retry')),
         ],
       ),
     );

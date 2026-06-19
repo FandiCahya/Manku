@@ -52,7 +52,7 @@ IconData _iconForCategory(String name) {
   return Icons.category;
 }
 
-class CategoryBreakdown extends StatelessWidget {
+class CategoryBreakdown extends StatefulWidget {
   final List<CategoryBreakdownItem>? categories;
   final bool isLoading;
 
@@ -61,6 +61,13 @@ class CategoryBreakdown extends StatelessWidget {
     this.categories,
     this.isLoading = false,
   });
+
+  @override
+  State<CategoryBreakdown> createState() => _CategoryBreakdownState();
+}
+
+class _CategoryBreakdownState extends State<CategoryBreakdown> {
+  String _selectedFilter = 'all'; // 'all', 'income', 'expense'
 
   String _formatCurrency(double amount) {
     final parts = amount.toStringAsFixed(0).split('');
@@ -72,41 +79,100 @@ class CategoryBreakdown extends StatelessWidget {
     return 'Rp $buffer';
   }
 
+  List<CategoryBreakdownItem> get _filteredCategories {
+    final cats = widget.categories ?? [];
+    if (_selectedFilter == 'all') return cats;
+    return cats.where((cat) => cat.type == _selectedFilter).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cats = categories ?? [];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cats = _filteredCategories;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            'Category Breakdown',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: context.colors.primary,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Category Breakdown',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _selectedFilter == 'all'
+                          ? 'All transactions by category'
+                          : _selectedFilter == 'income'
+                              ? 'Income by category'
+                              : 'Expenses by category',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        Padding(
+        const SizedBox(height: 12),
+        
+        // Filter Tabs
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            'Pengeluaran per kategori bulan ini',
-            style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant),
+          child: Row(
+            children: [
+              _buildFilterChip(
+                label: 'All',
+                value: 'all',
+                icon: Icons.category_outlined,
+                isDark: isDark,
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                label: 'Income',
+                value: 'income',
+                icon: Icons.arrow_upward_rounded,
+                isDark: isDark,
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                label: 'Expense',
+                value: 'expense',
+                icon: Icons.arrow_downward_rounded,
+                isDark: isDark,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
-        if (isLoading)
+        
+        if (widget.isLoading)
           const Center(child: CircularProgressIndicator())
         else if (cats.isEmpty)
           Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                'Belum ada kategori pengeluaran bulan ini',
+                _selectedFilter == 'all'
+                    ? 'No transactions this month'
+                    : _selectedFilter == 'income'
+                        ? 'No income transactions this month'
+                        : 'No expense transactions this month',
                 style: TextStyle(color: context.colors.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
@@ -117,7 +183,9 @@ class CategoryBreakdown extends StatelessWidget {
             final cat = cats[i];
             final bgColor = _bgColors[i % _bgColors.length];
             final iconColor = _iconColors[i % _iconColors.length];
-            final progressColor = _iconColors[i % _iconColors.length];
+            final progressColor = cat.type == 'income' 
+                ? context.colors.mint 
+                : context.colors.coral;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -125,16 +193,75 @@ class CategoryBreakdown extends StatelessWidget {
                 context: context,
                 icon: _iconForCategory(cat.name),
                 title: cat.name,
-                subtitle: '${cat.count} transaksi',
+                subtitle: '${cat.count} transactions',
                 amount: _formatCurrency(cat.amount),
                 percentage: cat.percentage.clamp(0.0, 1.0),
                 backgroundColor: bgColor,
                 iconColor: iconColor,
                 progressColor: progressColor,
+                type: cat.type,
               ),
             );
           }),
       ],
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required String value,
+    required IconData icon,
+    required bool isDark,
+  }) {
+    final isSelected = _selectedFilter == value;
+    
+    Color chipColor;
+    Color textColor;
+    
+    if (isSelected) {
+      if (value == 'income') {
+        chipColor = context.colors.mint;
+        textColor = Colors.white;
+      } else if (value == 'expense') {
+        chipColor = context.colors.coral;
+        textColor = Colors.white;
+      } else {
+        chipColor = context.colors.primary;
+        textColor = Colors.white;
+      }
+    } else {
+      chipColor = isDark ? const Color(0xFF253F55) : context.colors.surfaceContainerHigh;
+      textColor = isDark ? Colors.white70 : context.colors.onSurfaceVariant;
+    }
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: chipColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: textColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -148,6 +275,7 @@ class CategoryBreakdown extends StatelessWidget {
     required Color backgroundColor,
     required Color iconColor,
     required Color progressColor,
+    required String type,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -155,7 +283,13 @@ class CategoryBreakdown extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1D3448) : context.colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: type == 'income' 
+              ? context.colors.mint.withValues(alpha: 0.2)
+              : context.colors.coral.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
@@ -179,13 +313,38 @@ class CategoryBreakdown extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: isDark ? Colors.white : context.colors.onSurface,
-                            ),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: isDark ? Colors.white : context.colors.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: type == 'income'
+                                      ? context.colors.mint.withValues(alpha: 0.15)
+                                      : context.colors.coral.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  type == 'income' ? 'IN' : 'OUT',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: type == 'income' ? context.colors.mint : context.colors.coral,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -206,7 +365,9 @@ class CategoryBreakdown extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
-                  color: isDark ? Colors.white : context.colors.primary,
+                  color: type == 'income'
+                      ? context.colors.mint
+                      : context.colors.coral,
                 ),
               ),
             ],
@@ -227,7 +388,7 @@ class CategoryBreakdown extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              '${(percentage * 100).toStringAsFixed(1)}% dari total',
+              '${(percentage * 100).toStringAsFixed(1)}% of total',
               style: TextStyle(
                 fontSize: 10,
                 color: isDark ? Colors.white70 : context.colors.onSurfaceVariant,

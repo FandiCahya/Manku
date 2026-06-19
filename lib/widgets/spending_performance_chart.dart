@@ -13,7 +13,8 @@ class SpendingPerformanceChart extends StatefulWidget {
   });
 
   @override
-  State<SpendingPerformanceChart> createState() => _SpendingPerformanceChartState();
+  State<SpendingPerformanceChart> createState() =>
+      _SpendingPerformanceChartState();
 }
 
 class _SpendingPerformanceChartState extends State<SpendingPerformanceChart> {
@@ -63,11 +64,51 @@ class _SpendingPerformanceChartState extends State<SpendingPerformanceChart> {
       }
     }
 
-    if (closestIndex != _selectedIndex && closestIndex >= 0 && closestIndex < months.length) {
+    if (closestIndex != _selectedIndex &&
+        closestIndex >= 0 &&
+        closestIndex < months.length) {
       setState(() {
         _selectedIndex = closestIndex;
       });
     }
+  }
+
+  Widget _buildLegendItem(String label, Color color, double amount) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark
+                    ? Colors.white70
+                    : context.colors.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              _formatCurrency(amount),
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white : context.colors.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildTrendPill(PerformanceMonth current, PerformanceMonth? previous) {
@@ -92,12 +133,14 @@ class _SpendingPerformanceChartState extends State<SpendingPerformanceChart> {
     final currentAmt = current.amount;
     final prevAmt = previous.amount;
     final pct = ((currentAmt - prevAmt) / prevAmt) * 100;
-    
+
     // Untuk pengeluaran: menurun (negatif) adalah bagus, meningkat (positif) adalah peringatan
     final increased = currentAmt > prevAmt;
     final isZero = currentAmt == prevAmt;
-    
-    final label = isZero ? 'Stabil' : '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%';
+
+    final label = isZero
+        ? 'Stabil'
+        : '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%';
 
     late Color pillColor;
     late Color textColor;
@@ -126,11 +169,7 @@ class _SpendingPerformanceChartState extends State<SpendingPerformanceChart> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 12,
-            color: textColor,
-          ),
+          Icon(icon, size: 12, color: textColor),
           const SizedBox(width: 4),
           Text(
             label,
@@ -159,14 +198,20 @@ class _SpendingPerformanceChartState extends State<SpendingPerformanceChart> {
 
     final hasData = !widget.isLoading && report != null && months.isNotEmpty;
 
-    final PerformanceMonth? activeMonth = hasData ? months[_selectedIndex] : null;
-    final PerformanceMonth? prevMonth = (hasData && _selectedIndex > 0) ? months[_selectedIndex - 1] : null;
+    final PerformanceMonth? activeMonth = hasData
+        ? months[_selectedIndex]
+        : null;
+    final PerformanceMonth? prevMonth = (hasData && _selectedIndex > 0)
+        ? months[_selectedIndex - 1]
+        : null;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1D3448) : context.colors.surfaceContainerLowest,
+        color: isDark
+            ? const Color(0xFF1D3448)
+            : context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -199,126 +244,111 @@ class _SpendingPerformanceChartState extends State<SpendingPerformanceChart> {
                     const SizedBox(height: 2),
                     Text(
                       widget.isLoading
-                          ? 'Memuat data performa...'
+                          ? 'Loading data...'
                           : !hasData
-                              ? 'Tidak ada data pengeluaran'
-                              : 'Total pengeluaran ${activeMonth?.month} ${activeMonth?.year}',
+                          ? 'No transaction data'
+                          : '6 months trend - ${activeMonth?.month} ${activeMonth?.year}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? Colors.white70 : context.colors.onSurfaceVariant,
+                        color: isDark
+                            ? Colors.white70
+                            : context.colors.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (hasData && activeMonth != null) _buildTrendPill(activeMonth, prevMonth),
             ],
           ),
           const SizedBox(height: 16),
-          // Jumlah Pengeluaran yang Aktif
+
+          // Legend for Income and Expense
+          if (hasData && activeMonth != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendItem(
+                  'Income',
+                  context.colors.mint,
+                  activeMonth.income,
+                ),
+                const SizedBox(width: 24),
+                _buildLegendItem(
+                  'Expense',
+                  context.colors.coral,
+                  activeMonth.expense,
+                ),
+              ],
+            ),
+          const SizedBox(height: 16),
+
+          // Area Grafik
           if (widget.isLoading)
             const SizedBox(
-              height: 38,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
+              height: 220,
+              child: Center(child: CircularProgressIndicator()),
             )
-          else if (activeMonth != null)
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, -0.1),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              ),
-              child: Text(
-                _formatCurrency(activeMonth.amount),
-                key: ValueKey('${activeMonth.month}_${activeMonth.amount}'),
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : context.colors.primary,
-                  letterSpacing: -0.5,
+          else if (!hasData)
+            SizedBox(
+              height: 220,
+              child: Center(
+                child: Text(
+                  'No transaction history for the last 6 months.',
+                  style: TextStyle(
+                    color: isDark
+                        ? Colors.white70
+                        : context.colors.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             )
           else
-            Text(
-              'Rp 0',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : context.colors.primary,
-              ),
-            ),
-          const SizedBox(height: 24),
-
-          // Area Grafik
-          if (widget.isLoading) const SizedBox(
-                  height: 180,
-                  child: Center(child: CircularProgressIndicator()),
-                ) else !hasData
-                  ? SizedBox(
-                      height: 180,
-                      child: Center(
-                        child: Text(
-                          'Belum ada riwayat transaksi 6 bulan terakhir.',
-                          style: TextStyle(
-                            color: isDark ? Colors.white70 : context.colors.onSurfaceVariant,
-                            fontSize: 13,
-                          ),
-                        ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                return GestureDetector(
+                  onTapDown: (details) =>
+                      _handleTouch(details.localPosition, width),
+                  onPanUpdate: (details) =>
+                      _handleTouch(details.localPosition, width),
+                  child: Container(
+                    height: 220,
+                    color: Colors.transparent,
+                    child: CustomPaint(
+                      size: Size(width, 220),
+                      painter: DualLineChartPainter(
+                        colors: context.colors,
+                        months: months,
+                        maxAmount: maxAmount,
+                        selectedIndex: _selectedIndex,
+                        isDark: isDark,
                       ),
-                    )
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        final width = constraints.maxWidth;
-                        return GestureDetector(
-                          onTapDown: (details) => _handleTouch(details.localPosition, width),
-                          onPanUpdate: (details) => _handleTouch(details.localPosition, width),
-                          child: Container(
-                            height: 180,
-                            color: Colors.transparent, // Untuk mendeteksi sentuhan di luar garis
-                            child: CustomPaint(
-                              size: Size(width, 180),
-                              painter: CurveChartPainter(
-                                colors: context.colors,
-                                months: months,
-                                maxAmount: maxAmount,
-                                selectedIndex: _selectedIndex,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
                     ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
   }
 }
 
-class CurveChartPainter extends CustomPainter {
-  final AppColors colors;
+// Painter untuk grafik dengan 2 garis (Income dan Expense)
+class DualLineChartPainter extends CustomPainter {
+  final dynamic colors;
   final List<PerformanceMonth> months;
   final double maxAmount;
   final int selectedIndex;
+  final bool isDark;
 
-  CurveChartPainter({
+  DualLineChartPainter({
     required this.colors,
     required this.months,
     required this.maxAmount,
     required this.selectedIndex,
+    required this.isDark,
   });
 
   @override
@@ -328,39 +358,53 @@ class CurveChartPainter extends CustomPainter {
     const leftPadding = 24.0;
     const rightPadding = 24.0;
     const topPadding = 20.0;
-    const bottomPadding = 30.0; // Memberi ruang untuk teks bulan di bawah
+    const bottomPadding = 30.0;
 
     final chartWidth = size.width - leftPadding - rightPadding;
     final chartHeight = size.height - topPadding - bottomPadding;
 
     if (chartWidth <= 0 || chartHeight <= 0) return;
 
-    // 1. Tentukan titik-titik koordinat data (X, Y)
-    final points = <Offset>[];
+    // 1. Tentukan titik-titik koordinat untuk Income dan Expense
+    final incomePoints = <Offset>[];
+    final expensePoints = <Offset>[];
+
     for (int i = 0; i < months.length; i++) {
       final x = leftPadding + (i * chartWidth / (months.length - 1));
-      final ratio = maxAmount > 0 ? months[i].amount / maxAmount : 0.0;
-      final y = size.height - bottomPadding - (ratio * chartHeight);
-      points.add(Offset(x, y));
+
+      // Income points (biru)
+      final incomeRatio = maxAmount > 0 ? months[i].income / maxAmount : 0.0;
+      final incomeY = size.height - bottomPadding - (incomeRatio * chartHeight);
+      incomePoints.add(Offset(x, incomeY));
+
+      // Expense points (merah)
+      final expenseRatio = maxAmount > 0 ? months[i].expense / maxAmount : 0.0;
+      final expenseY =
+          size.height - bottomPadding - (expenseRatio * chartHeight);
+      expensePoints.add(Offset(x, expenseY));
     }
 
     // 2. Gambar garis Grid Horizontal (3 buah)
     final gridPaint = Paint()
-      ..color = colors.outlineVariant.withValues(alpha: 0.12)
+      ..color = (colors.outlineVariant as Color).withValues(alpha: 0.12)
       ..strokeWidth = 1.0;
 
     for (int i = 0; i <= 2; i++) {
       final yGrid = topPadding + (i * chartHeight / 2);
-      canvas.drawLine(Offset(leftPadding, yGrid), Offset(size.width - rightPadding, yGrid), gridPaint);
+      canvas.drawLine(
+        Offset(leftPadding, yGrid),
+        Offset(size.width - rightPadding, yGrid),
+        gridPaint,
+      );
     }
 
     // 3. Gambar garis vertikal indikator jika ada yang dipilih
-    if (selectedIndex >= 0 && selectedIndex < points.length) {
-      final activePoint = points[selectedIndex];
+    if (selectedIndex >= 0 && selectedIndex < incomePoints.length) {
+      final activePoint = incomePoints[selectedIndex];
       final linePaint = Paint()
-        ..color = colors.primary.withValues(alpha: 0.15)
+        ..color = (colors.primary as Color).withValues(alpha: 0.10)
         ..strokeWidth = 1.5;
-      
+
       // Gambar garis putus-putus vertikal
       double startY = topPadding - 10;
       const dashHeight = 4.0;
@@ -375,109 +419,108 @@ class CurveChartPainter extends CustomPainter {
       }
     }
 
-    // 4. Bangun Path Bezier Halus (Kurva Kurva Bezier)
-    final path = Path();
-    path.moveTo(points[0].dx, points[0].dy);
-
-    for (int i = 0; i < points.length - 1; i++) {
-      final p1 = points[i];
-      final p2 = points[i + 1];
+    // 4. Bangun Path untuk Income (Biru - Smooth curve)
+    final incomePath = Path();
+    incomePath.moveTo(incomePoints[0].dx, incomePoints[0].dy);
+    for (int i = 0; i < incomePoints.length - 1; i++) {
+      final p1 = incomePoints[i];
+      final p2 = incomePoints[i + 1];
       final controlX = p1.dx + (p2.dx - p1.dx) / 2;
       final cp1 = Offset(controlX, p1.dy);
       final cp2 = Offset(controlX, p2.dy);
-      
-      path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+      incomePath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
     }
 
-    // 5. Gambar Gradient Fill di bawah Kurva
-    final fillPath = Path.from(path);
-    fillPath.lineTo(points.last.dx, size.height - bottomPadding);
-    fillPath.lineTo(points.first.dx, size.height - bottomPadding);
-    fillPath.close();
+    // 5. Bangun Path untuk Expense (Merah - Smooth curve)
+    final expensePath = Path();
+    expensePath.moveTo(expensePoints[0].dx, expensePoints[0].dy);
+    for (int i = 0; i < expensePoints.length - 1; i++) {
+      final p1 = expensePoints[i];
+      final p2 = expensePoints[i + 1];
+      final controlX = p1.dx + (p2.dx - p1.dx) / 2;
+      final cp1 = Offset(controlX, p1.dy);
+      final cp2 = Offset(controlX, p2.dy);
+      expensePath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+    }
 
-    final gradientPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          colors.primary.withValues(alpha: 0.24),
-          colors.primary.withValues(alpha: 0.00),
-        ],
-      ).createShader(Rect.fromLTRB(leftPadding, topPadding, size.width - rightPadding, size.height - bottomPadding));
-
-    canvas.drawPath(fillPath, gradientPaint);
-
-    // 6. Gambar Garis Kurva Utama
-    final strokePaint = Paint()
-      ..color = colors.primary
+    // 6. Gambar Garis Income (Biru)
+    final incomeStrokePaint = Paint()
+      ..color = colors.mint as Color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
+      ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(incomePath, incomeStrokePaint);
 
-    canvas.drawPath(path, strokePaint);
+    // 7. Gambar Garis Expense (Merah)
+    final expenseStrokePaint = Paint()
+      ..color = colors.coral as Color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(expensePath, expenseStrokePaint);
 
-    // 7. Gambar Titik-titik Data (Dots) & Teks Label Bulan
-    for (int i = 0; i < points.length; i++) {
-      final point = points[i];
+    // 8. Gambar Titik-titik Data & Label Bulan
+    for (int i = 0; i < incomePoints.length; i++) {
+      final incomePoint = incomePoints[i];
+      final expensePoint = expensePoints[i];
       final isSelected = i == selectedIndex;
 
-      // a. Gambar Titik data
+      // Gambar dot untuk Income
       if (isSelected) {
-        // Halo luar yang transparan (Efek Glow)
         final glowPaint = Paint()
-          ..color = colors.primary.withValues(alpha: 0.18)
+          ..color = (colors.mint as Color).withValues(alpha: 0.20)
           ..style = PaintingStyle.fill;
-        canvas.drawCircle(point, 14.0, glowPaint);
-
-        // Border luar putih yang tebal
-        final outerPaint = Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(point, 7.0, outerPaint);
-
-        // Lingkaran dalam warna primer
-        final innerPaint = Paint()
-          ..color = colors.primary
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(point, 4.5, innerPaint);
-      } else {
-        // Dot biasa non-aktif
-        final bgDotPaint = Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(point, 4.5, bgDotPaint);
-
-        final dotPaint = Paint()
-          ..color = colors.outlineVariant.withValues(alpha: 0.7)
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(point, 3.0, dotPaint);
+        canvas.drawCircle(incomePoint, 12.0, glowPaint);
       }
 
-      // b. Menggambar Label Bulan di bawah titik
+      final incomeDotPaint = Paint()
+        ..color = colors.mint as Color
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(incomePoint, isSelected ? 5.0 : 3.5, incomeDotPaint);
+
+      // Gambar dot untuk Expense
+      if (isSelected) {
+        final glowPaint = Paint()
+          ..color = (colors.coral as Color).withValues(alpha: 0.20)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(expensePoint, 12.0, glowPaint);
+      }
+
+      final expenseDotPaint = Paint()
+        ..color = colors.coral as Color
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(expensePoint, isSelected ? 5.0 : 3.5, expenseDotPaint);
+
+      // Label Bulan di bawah titik
       final textPainter = TextPainter(
         text: TextSpan(
           text: months[i].month,
           style: TextStyle(
-            color: isSelected ? colors.primary : colors.outline,
+            color: isSelected
+                ? colors.primary as Color
+                : colors.outline as Color,
             fontSize: 10,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.bold,
           ),
         ),
         textDirection: TextDirection.ltr,
       );
-      
+
       textPainter.layout();
       textPainter.paint(
         canvas,
-        Offset(point.dx - (textPainter.width / 2), size.height - bottomPadding + 8),
+        Offset(
+          incomePoint.dx - (textPainter.width / 2),
+          size.height - bottomPadding + 8,
+        ),
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant CurveChartPainter oldDelegate) {
+  bool shouldRepaint(covariant DualLineChartPainter oldDelegate) {
     return oldDelegate.months != months ||
         oldDelegate.maxAmount != maxAmount ||
         oldDelegate.selectedIndex != selectedIndex;

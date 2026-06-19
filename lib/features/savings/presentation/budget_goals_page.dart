@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_manage/core/constants/colors.dart';
+import 'package:my_manage/core/localization/app_localizations.dart';
+import 'package:my_manage/core/widgets/animated_widgets.dart';
 import 'package:my_manage/features/savings/domain/budget_models.dart';
 import 'package:my_manage/features/savings/presentation/cubit/savings_cubit.dart';
 import 'package:my_manage/features/savings/presentation/cubit/savings_state.dart';
@@ -18,6 +20,8 @@ class BudgetGoalsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return BlocConsumer<SavingsCubit, SavingsState>(
       listener: (context, state) {
         if (state is SavingsSuccess) {
@@ -46,19 +50,25 @@ class BudgetGoalsPage extends StatelessWidget {
           backgroundColor: context.colors.background,
           body: _BudgetGoalsBody(state: state),
           floatingActionButton: state is SavingsLoaded
-              ? FloatingActionButton.extended(
-                  onPressed: () => _openSetBudgetSheet(
-                    context,
-                    monthLabel: state.budgetGoals.month,
+              ? ScaleIn(
+                  delay: const Duration(milliseconds: 600),
+                  child: Hero(
+                    tag: 'add_goal_fab',
+                    child: FloatingActionButton.extended(
+                      onPressed: () => _openSetBudgetSheet(
+                        context,
+                        monthLabel: state.budgetGoals.month,
+                      ),
+                      backgroundColor: context.colors.primary,
+                      foregroundColor: Colors.white,
+                      icon: const Icon(Icons.add),
+                      label: Text(
+                        l10n.translate('add_goal'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      elevation: 4,
+                    ),
                   ),
-                  backgroundColor: context.colors.primary,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    'Tambah Tujuan',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  elevation: 4,
                 )
               : null,
         );
@@ -222,23 +232,40 @@ class _LoadedView extends StatelessWidget {
         slivers: [
           BudgetHeaderSliver(monthLabel: data.month),
           SliverToBoxAdapter(
-            child: BudgetSummaryCard(summary: data.summary),
+            child: FadeInDown(
+              delay: const Duration(milliseconds: 100),
+              child: BudgetSummaryCard(summary: data.summary),
+            ),
           ),
           SliverToBoxAdapter(
-            child: BudgetWarningsRow(summary: data.summary),
+            child: FadeInUp(
+              delay: const Duration(milliseconds: 200),
+              child: BudgetWarningsRow(summary: data.summary),
+            ),
           ),
           SliverToBoxAdapter(
-            child: _BudgetListHeader(count: data.budgets.length),
+            child: SlideInLeft(
+              delay: const Duration(milliseconds: 300),
+              child: _BudgetListHeader(count: data.budgets.length),
+            ),
           ),
           if (data.budgets.isEmpty)
-            const SliverToBoxAdapter(child: _EmptyBudgetView())
+            SliverToBoxAdapter(
+              child: ScaleIn(
+                delay: const Duration(milliseconds: 400),
+                child: const _EmptyBudgetView(),
+              ),
+            )
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                (ctx, i) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 6),
-                  child: _budgetCard(ctx, data.budgets[i], data.month),
+                (ctx, i) => FadeInUp(
+                  delay: Duration(milliseconds: 400 + (i * 100)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 6),
+                    child: _budgetCard(ctx, data.budgets[i], data.month),
+                  ),
                 ),
                 childCount: data.budgets.length,
               ),
@@ -296,19 +323,21 @@ class _LoadedView extends StatelessWidget {
     BuildContext context,
     BudgetGoalItem item,
   ) async {
+    final l10n = AppLocalizations.of(context);
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Tujuan?'),
+        title: Text(l10n.translate('delete_goal')),
         content: Text(
-          'Tujuan "${item.categoryName}" akan dihapus.',
+          l10n.translate('goal_will_be_deleted').replaceAll('{name}', item.categoryName),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
+            child: Text(l10n.translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -316,7 +345,7 @@ class _LoadedView extends StatelessWidget {
               backgroundColor: Colors.red.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Hapus'),
+            child: Text(l10n.translate('delete')),
           ),
         ],
       ),
@@ -336,12 +365,14 @@ class _BudgetListHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Row(
         children: [
           Text(
-            'Tujuan Tabungan',
+            l10n.translate('savings_goals'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -357,7 +388,7 @@ class _BudgetListHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '$count tujuan',
+              '$count ${l10n.translate('goals_count')}',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -378,6 +409,8 @@ class _EmptyBudgetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Padding(
       padding: const EdgeInsets.all(40),
       child: Column(
@@ -396,7 +429,7 @@ class _EmptyBudgetView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Belum Ada Tujuan',
+            l10n.translate('no_goals_yet'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -405,7 +438,7 @@ class _EmptyBudgetView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tambahkan tujuan tabungan untuk\nmencapai impianmu!',
+            l10n.translate('add_savings_goal'),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,

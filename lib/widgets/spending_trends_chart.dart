@@ -85,7 +85,7 @@ class SpendingTrendsChart extends StatelessWidget {
               height: 160,
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (displayDays.isEmpty || maxDisplayAmount == 0)
+          else if (displayDays.isEmpty)
             SizedBox(
               height: 160,
               child: Center(

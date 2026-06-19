@@ -4,23 +4,29 @@ import '../core/constants/colors.dart';
 
 class StatsGrid extends StatelessWidget {
   final double? dailyExpense;
-  final double? totalExpense;
   final double? monthlyBalance;
   final bool isLoading;
+
+  // Kept for backward compat — not displayed separately
+  final double? totalIncome;
+  final double? totalExpense;
+  final double? budgetLeft;
 
   const StatsGrid({
     super.key,
     this.dailyExpense,
-    this.totalExpense,
     this.monthlyBalance,
     this.isLoading = false,
+    this.totalIncome,
+    this.totalExpense,
+    this.budgetLeft,
   });
 
   String _formatShort(double? v) {
     if (v == null) return '0';
     final isNegative = v < 0;
     final absV = v.abs();
-    
+
     String result;
     if (absV >= 1000000) {
       result = '${(absV / 1000000).toStringAsFixed(1)}M';
@@ -29,12 +35,16 @@ class StatsGrid extends StatelessWidget {
     } else {
       result = absV.toStringAsFixed(0);
     }
-    
+
     return isNegative ? '-$result' : result;
   }
 
   @override
   Widget build(BuildContext context) {
+    // Monthly balance: prioritise explicit value, fallback to income - expense
+    final balance = monthlyBalance
+        ?? ((totalIncome ?? 0) - (totalExpense ?? 0));
+
     return Row(
       children: [
         Expanded(
@@ -50,15 +60,20 @@ class StatsGrid extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _StatCard(
-            icon: Icons.trending_up_rounded,
-            iconColor: (monthlyBalance ?? 0) >= 0 
-                ? context.colors.mint 
+            icon: balance >= 0
+                ? Icons.trending_up_rounded
+                : Icons.trending_down_rounded,
+            iconColor: balance >= 0
+                ? context.colors.mint
                 : context.colors.coral,
-            iconBgColor: (monthlyBalance ?? 0) >= 0
+            iconBgColor: balance >= 0
                 ? context.colors.mint.withValues(alpha: 0.15)
                 : context.colors.coral.withValues(alpha: 0.15),
             label: 'Monthly Balance',
-            value: _formatShort(monthlyBalance),
+            value: _formatShort(balance),
+            valueColor: balance >= 0
+                ? context.colors.mint
+                : context.colors.coral,
             isLoading: isLoading,
           ),
         ),
@@ -73,6 +88,7 @@ class _StatCard extends StatelessWidget {
   final Color iconBgColor;
   final String label;
   final String value;
+  final Color? valueColor;
   final bool isLoading;
 
   const _StatCard({
@@ -81,21 +97,26 @@ class _StatCard extends StatelessWidget {
     required this.iconBgColor,
     required this.label,
     required this.value,
+    this.valueColor,
     this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final effectiveValueColor =
+        valueColor ?? (isDark ? Colors.white : const Color(0xFF1E1E1E));
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1D3448) : Colors.white,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isDark ? const Color(0xFF2A4A62) : context.colors.outlineVariant, 
-          width: 1.5
+          color: isDark
+              ? const Color(0xFF2A4A62)
+              : context.colors.outlineVariant,
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
@@ -123,7 +144,9 @@ class _StatCard extends StatelessWidget {
                 child: Text(
                   label,
                   style: GoogleFonts.nunito(
-                    color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+                    color: isDark
+                        ? Colors.white70
+                        : const Color(0xFF6B7280),
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -132,21 +155,24 @@ class _StatCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          if (isLoading) const SizedBox(
-                  height: 36,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: CircularProgressIndicator(),
-                  ),
-                ) else Text(
-                  value,
-                  style: GoogleFonts.nunito(
-                    color: isDark ? Colors.white : const Color(0xFF1E1E1E),
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
-                  ),
-                ),
+          if (isLoading)
+            const SizedBox(
+              height: 36,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else
+            Text(
+              value,
+              style: GoogleFonts.nunito(
+                color: effectiveValueColor,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1,
+              ),
+            ),
         ],
       ),
     );

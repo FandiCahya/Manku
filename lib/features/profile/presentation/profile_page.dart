@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../auth/presentation/login_page.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 import '../../auth/presentation/cubit/auth_state.dart';
@@ -58,6 +59,8 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return MultiBlocListener(
       listeners: [
         BlocListener<AuthCubit, AuthState>(
@@ -117,9 +120,9 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                     indicatorWeight: 3,
                     indicatorSize: TabBarIndicatorSize.tab,
-                    tabs: const [
-                      Tab(text: '👤 Profil'),
-                      Tab(text: '🎯 Tujuan Keuangan'),
+                    tabs: [
+                      Tab(text: '👤 ${l10n.translate('nav_profile')}'),
+                      Tab(text: '🎯 ${l10n.translate('financial_goals')}'),
                     ],
                   ),
                 ),
