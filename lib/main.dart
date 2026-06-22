@@ -7,7 +7,6 @@ import 'core/constants/colors.dart';
 import 'core/network/api_client.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/localization/language_provider.dart';
-import 'widgets/debug_info_overlay.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/auth/presentation/register_page.dart';
 import 'features/home/presentation/home_page.dart';
@@ -16,6 +15,7 @@ import 'features/auth/presentation/cubit/auth_state.dart';
 import 'features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'features/transactions/presentation/cubit/transaction_cubit.dart';
 import 'features/savings/presentation/cubit/savings_cubit.dart';
+import 'features/investment/presentation/cubit/investment_cubit.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
@@ -73,6 +73,9 @@ class _MyAppState extends State<MyApp> {
           create: (context) => SavingsCubit()..fetchSavingsData(),
         ),
         BlocProvider<ThemeCubit>(create: (context) => ThemeCubit(widget.prefs)),
+        BlocProvider<InvestmentCubit>(
+          create: (context) => InvestmentCubit()..loadInvestments(),
+        ),
       ],
       child: Consumer<LanguageProvider>(
         builder: (context, languageProvider, _) {

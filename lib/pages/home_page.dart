@@ -13,6 +13,7 @@ import '../widgets/assistant_section.dart';
 import '../widgets/search_bar_section.dart';
 import '../widgets/spending_performance_chart.dart';
 import '../widgets/category_breakdown.dart';
+import '../features/investment/presentation/pages/investment_tab.dart';
 import '../widgets/chat_transaction_input.dart';
 import '../widgets/transaction_input_form.dart';
 import 'profile_page.dart';
@@ -542,28 +543,76 @@ class _HomePageState extends State<HomePage> {
 
   // ── REPORTS ─────────────────────────────────────────────────────────────
   Widget _buildReportsContent() {
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: _fetchReport,
-        child: SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            spacing: 24,
-            children: [
-              SpendingPerformanceChart(
-                report: _report,
-                isLoading: _reportLoading,
+    return DefaultTabController(
+      length: 2,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Tab Bar
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: context.colors.surfaceContainer,
+                borderRadius: BorderRadius.circular(12),
               ),
-              CategoryBreakdown(
-                categories: _report?.categoryBreakdown,
-                isLoading: _reportLoading,
+              child: TabBar(
+                indicator: BoxDecoration(
+                  color: context.colors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: context.colors.onPrimary,
+                unselectedLabelColor: context.colors.onSurfaceVariant,
+                labelStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                tabs: const [
+                  Tab(text: 'Transactions'),
+                  Tab(text: 'Investments'),
+                ],
               ),
-              if (_reportError != null)
-                _buildErrorBanner(_reportError!, _fetchReport),
-              SizedBox(height: 16),
-            ],
-          ),
+            ),
+
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // Transactions Tab
+                  RefreshIndicator(
+                    onRefresh: _fetchReport,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      child: Column(
+                        spacing: 24,
+                        children: [
+                          SpendingPerformanceChart(
+                            report: _report,
+                            isLoading: _reportLoading,
+                          ),
+                          CategoryBreakdown(
+                            categories: _report?.categoryBreakdown,
+                            isLoading: _reportLoading,
+                          ),
+                          if (_reportError != null)
+                            _buildErrorBanner(_reportError!, _fetchReport),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Investments Tab
+                  const InvestmentTab(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

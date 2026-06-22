@@ -63,9 +63,23 @@ class DashboardRepository {
         }
       }
 
-      final totalBalance = totalIncome - totalExpense;
+      // Fetch investment portfolio summary to add to total balance
+      double investmentCurrentValue = 0;
+      try {
+        final invResponse = await ApiClient.dio.get<Map<String, dynamic>>(
+          ApiConfig.portfolioSummaryEndpoint,
+        );
+        final invData = invResponse.data;
+        if (invData != null && invData['current_value'] != null) {
+          investmentCurrentValue = (invData['current_value'] as num).toDouble();
+        }
+      } catch (e) {
+        debugPrint('Failed to fetch investments for dashboard: $e');
+      }
+
+      final totalBalance = (totalIncome - totalExpense) + investmentCurrentValue;
       debugPrint(
-        '💰 Dashboard computed: income=$totalIncome expense=$totalExpense balance=$totalBalance',
+        '💰 Dashboard computed: income=$totalIncome expense=$totalExpense inv=$investmentCurrentValue balance=$totalBalance',
       );
 
       // Build spending trend for the last 7 days (including empty ones)

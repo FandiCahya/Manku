@@ -52,22 +52,20 @@ class BudgetGoalsPage extends StatelessWidget {
           floatingActionButton: state is SavingsLoaded
               ? ScaleIn(
                   delay: const Duration(milliseconds: 600),
-                  child: Hero(
-                    tag: 'add_goal_fab',
-                    child: FloatingActionButton.extended(
-                      onPressed: () => _openSetBudgetSheet(
-                        context,
-                        monthLabel: state.budgetGoals.month,
-                      ),
-                      backgroundColor: context.colors.primary,
-                      foregroundColor: Colors.white,
-                      icon: const Icon(Icons.add),
-                      label: Text(
-                        l10n.translate('add_goal'),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      elevation: 4,
+                  child: FloatingActionButton.extended(
+                    heroTag: null,
+                    onPressed: () => _openSetBudgetSheet(
+                      context,
+                      monthLabel: state.budgetGoals.month,
                     ),
+                    backgroundColor: context.colors.primary,
+                    foregroundColor: Colors.white,
+                    icon: const Icon(Icons.add),
+                    label: Text(
+                      l10n.translate('add_goal'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    elevation: 4,
                   ),
                 )
               : null,

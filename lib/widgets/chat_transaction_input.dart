@@ -136,7 +136,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
 
         // TODO: Process image with OCR API
         // For now, show placeholder response
-        await Future.delayed(const Duration(seconds: 1));
+        await Future<void>.delayed(const Duration(seconds: 1));
 
         setState(() {
           isLoading = false;
@@ -216,7 +216,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
   void _showImageSourceDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -417,7 +417,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
                 if (messages.isNotEmpty)
                   IconButton(
                     onPressed: () {
-                      showDialog(
+                      showDialog<void>(
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Hapus Riwayat Chat?'),

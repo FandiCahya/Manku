@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/animated_widgets.dart';
 import '../../../../models/transaction_api.dart';
 import '../../../../widgets/assistant_section.dart';
 import '../../../../widgets/search_bar_section.dart';
@@ -12,8 +13,16 @@ import '../../../transactions/presentation/cubit/transaction_state.dart';
 import '../../../../widgets/transaction_input_form.dart';
 import 'error_banner.dart';
 
-class HistoryTab extends StatelessWidget {
+class HistoryTab extends StatefulWidget {
   const HistoryTab({super.key});
+
+  @override
+  State<HistoryTab> createState() => _HistoryTabState();
+}
+
+class _HistoryTabState extends State<HistoryTab> {
+  String _selectedFilter = 'All';
+  final List<String> _filters = ['All', '30 Days', '7 Days', '3 Days'];
 
   @override
   Widget build(BuildContext context) {
@@ -55,57 +64,147 @@ class HistoryTab extends StatelessWidget {
         List<TransactionGroup> filteredGroups = [];
         if (state is TransactionLoaded) {
           totalTxns = state.history.totalTransactions;
-          filteredGroups = state.filteredGroups;
+          
+          if (_selectedFilter == 'All') {
+            filteredGroups = state.filteredGroups;
+          } else {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final maxDays = _selectedFilter == '30 Days'
+                ? 30
+                : _selectedFilter == '7 Days'
+                    ? 7
+                    : 3;
+
+            for (final group in state.filteredGroups) {
+              DateTime? groupDate;
+              try {
+                // assume group.date is YYYY-MM-DD
+                groupDate = DateTime.parse(group.date);
+                groupDate = DateTime(groupDate.year, groupDate.month, groupDate.day);
+              } catch (_) {}
+
+              if (groupDate != null) {
+                final diff = today.difference(groupDate).inDays;
+                // Include if diff is within maxDays (and not far in the future, though future is fine)
+                if (diff <= maxDays) {
+                  filteredGroups.add(group);
+                }
+              } else {
+                filteredGroups.add(group);
+              }
+            }
+          }
         }
 
         return SafeArea(
           child: RefreshIndicator(
             onRefresh: () => context.read<TransactionCubit>().fetchTransactionsAndReport(),
-            child: SingleChildScrollView(
+            child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const AppHeader(showBackground: false),
-                  const SizedBox(height: 16),
-                  const AssistantSection(),
-                  const SizedBox(height: 16),
-                  SearchBarSection(
-                    onChanged: (q) => context.read<TransactionCubit>().searchTransactions(q),
-                  ),
-                  const SizedBox(height: 16),
-                  if (!isLoading && state is TransactionLoaded)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        '$totalTxns transaksi total',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const AppHeader(showBackground: false),
+                        const SizedBox(height: 16),
+                        const AssistantSection(),
+                        const SizedBox(height: 16),
+                        SearchBarSection(
+                          onChanged: (q) => context.read<TransactionCubit>().searchTransactions(q),
                         ),
+                        const SizedBox(height: 16),
+                        // Filter Chips
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: _filters.map((filter) {
+                              final isSelected = _selectedFilter == filter;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(
+                                    filter,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      setState(() {
+                                        _selectedFilter = filter;
+                                      });
+                                    }
+                                  },
+                                  selectedColor: context.colors.primary.withOpacity(0.2),
+                                  labelStyle: TextStyle(
+                                    color: isSelected ? context.colors.primary : context.colors.onSurfaceVariant,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: BorderSide(
+                                      color: isSelected ? context.colors.primary : context.colors.outlineVariant,
+                                    ),
+                                  ),
+                                  backgroundColor: Colors.transparent,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (!isLoading && state is TransactionLoaded)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              'Menampilkan ${filteredGroups.fold<int>(0, (sum, g) => sum + g.transactions.length)} transaksi',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        if (isLoading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(40),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else if (error != null)
+                          ErrorBanner(
+                            error: error,
+                            onRetry: () => context.read<TransactionCubit>().fetchTransactionsAndReport(),
+                          )
+                        else if (filteredGroups.isEmpty)
+                          const EmptyHistoryWidget(),
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isLoading && error == null && filteredGroups.isNotEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == filteredGroups.length) {
+                            return const SizedBox(height: 32);
+                          }
+                          return TransactionGroupWidget(group: filteredGroups[index]);
+                        },
+                        childCount: filteredGroups.length + 1,
                       ),
                     ),
-                  if (isLoading)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (error != null)
-                    ErrorBanner(
-                      error: error,
-                      onRetry: () => context.read<TransactionCubit>().fetchTransactionsAndReport(),
-                    )
-                  else if (filteredGroups.isEmpty)
-                    const EmptyHistoryWidget()
-                  else
-                    ...filteredGroups.map((group) => TransactionGroupWidget(group: group)),
-                  const SizedBox(height: 32),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         );
@@ -139,7 +238,14 @@ class TransactionGroupWidget extends StatelessWidget {
             ),
           ),
         ),
-        ...group.transactions.map((txn) => TransactionItemWidget(txn: txn, date: group.date)),
+        ...group.transactions.asMap().entries.map((entry) {
+          final index = entry.key;
+          final txn = entry.value;
+          return SlideInLeft(
+            delay: Duration(milliseconds: 100 + (index * 50)),
+            child: TransactionItemWidget(txn: txn, date: group.date),
+          );
+        }),
         const SizedBox(height: 8),
       ],
     );

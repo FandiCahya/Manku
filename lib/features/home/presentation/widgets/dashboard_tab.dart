@@ -12,6 +12,7 @@ import '../../../dashboard/presentation/cubit/dashboard_cubit.dart';
 import '../../../dashboard/presentation/cubit/dashboard_state.dart';
 import '../../../transactions/presentation/cubit/transaction_cubit.dart';
 import '../../../savings/presentation/cubit/savings_cubit.dart';
+import '../../../savings/presentation/budget_goals_page.dart';
 import 'error_banner.dart';
 
 class DashboardTab extends StatefulWidget {
@@ -82,8 +83,12 @@ class _DashboardTabState extends State<DashboardTab> with AutomaticKeepAliveClie
                         child: GoalsProgressCard(
                           isLoading: isLoading,
                           onTap: () {
-                            // Navigate to goals page (profile tab 2)
-                            DefaultTabController.of(context).animateTo(3); // Profile tab
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const BudgetGoalsPage(),
+                              ),
+                            );
                           },
                         ),
                       ),
