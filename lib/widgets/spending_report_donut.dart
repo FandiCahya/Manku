@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
 import '../models/report_summary.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 // Palet warna untuk kategori di donut chart
 const List<Color> _kCategoryColors = [
@@ -130,7 +131,7 @@ class SpendingReportDonut extends StatelessWidget {
                   ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 400.ms, curve: Curves.easeOut).scaleXY(begin: 0.95, end: 1.0, curve: Curves.easeOutBack);
   }
 
   Widget _buildLegendItem(BuildContext context, String label, Color color, double percentage) {

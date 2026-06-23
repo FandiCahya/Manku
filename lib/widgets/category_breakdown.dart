@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
 import '../models/report_summary.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 // Palet warna icon per kategori (fallback urutan)
 const List<Color> _bgColors = [
@@ -201,7 +202,7 @@ class _CategoryBreakdownState extends State<CategoryBreakdown> {
                 progressColor: progressColor,
                 type: cat.type,
               ),
-            );
+            ).animate(delay: (i * 50).ms).fadeIn(duration: 400.ms, curve: Curves.easeOut).slideY(begin: 0.1, end: 0);
           }),
       ],
     );

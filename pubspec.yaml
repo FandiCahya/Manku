@@ -68,6 +68,7 @@ dependencies:
 
   path: any
   sqflite_common_ffi_web: ^1.0.2
+  flutter_animate: ^4.5.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -79,6 +80,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   very_good_analysis: ^5.1.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -134,3 +136,14 @@ dependency_overrides:
   # Pin sqflite_common_ffi to version before native assets were introduced
   sqflite_common_ffi: 2.3.0
   sqlite3_flutter_libs: 0.5.18
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  web:
+    generate: true
+    image_path: "assets/logo/logo.png"
+    background_color: "#FFFFFF"
+    theme_color: "#0175C2"
+  image_path: "assets/logo/logo.png"
+  min_sdk_android: 21

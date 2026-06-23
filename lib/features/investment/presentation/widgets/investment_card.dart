@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/colors.dart';
 import '../../domain/investment_models.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 /// Maps crypto/stock symbols to specific emoji icons
 String _iconForSymbol(String symbol, bool isCrypto) {
@@ -479,7 +480,7 @@ class InvestmentCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 400.ms, curve: Curves.easeOut).slideY(begin: 0.1, end: 0);
   }
 
   Widget _infoTile(

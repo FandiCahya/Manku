@@ -82,7 +82,7 @@ class _MyAppState extends State<MyApp> {
           return BlocBuilder<ThemeCubit, ThemeMode>(
             builder: (context, themeMode) {
               return MaterialApp(
-                title: 'My Manage - Financial Dashboard',
+                title: 'Manku',
                 debugShowCheckedModeBanner: false,
                 themeMode: themeMode,
                 theme: AppTheme.lightTheme,

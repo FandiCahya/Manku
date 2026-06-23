@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'transaction_model.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class TransactionItem extends StatelessWidget {
   final TransactionModel transaction;
@@ -79,6 +80,6 @@ class TransactionItem extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 400.ms, curve: Curves.easeOut).slideY(begin: 0.1, end: 0);
   }
 }
