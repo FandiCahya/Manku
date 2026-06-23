@@ -1,23 +1,36 @@
 """
 Service untuk mengambil harga real-time dari berbagai API
-- Saham Indonesia: dari API IDX atau alternatif
-- Crypto: dari CoinGecko API (gratis)
+- Crypto: dari CoinGecko API (gratis, IDR)
+- Saham Indonesia (IDX): Yahoo Finance SYMBOL.JK (IDR)
+- Saham Global (NYSE/NASDAQ): Yahoo Finance SYMBOL + konversi USD→IDR
 """
 import requests
+import time
 from decimal import Decimal
 from django.core.cache import cache
 from django.utils import timezone
 
 
+# Header umum agar tidak diblokir
+_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/120.0.0.0 Safari/537.36'
+    ),
+    'Accept': 'application/json',
+}
+
+
 class PriceAPIService:
     """Service untuk fetch harga real-time"""
-    
+
     # ══════════════════════════════════════════════════════════════════════════
     # CRYPTO PRICE API (CoinGecko - Free, No API Key Required)
     # ══════════════════════════════════════════════════════════════════════════
-    
+
     COINGECKO_API_URL = "https://api.coingecko.com/api/v3"
-    
+
     # Mapping common crypto symbols ke CoinGecko ID
     CRYPTO_ID_MAPPING = {
         'BTC': 'bitcoin',
@@ -35,378 +48,406 @@ class PriceAPIService:
         'AVAX': 'avalanche-2',
         'TRX': 'tron',
         'LINK': 'chainlink',
+        'LTC': 'litecoin',
+        'ATOM': 'cosmos',
+        'UNI': 'uniswap',
+        'XLM': 'stellar',
+        'ALGO': 'algorand',
+        'FIL': 'filecoin',
+        'NEAR': 'near',
+        'APT': 'aptos',
+        'ARB': 'arbitrum',
+        'OP': 'optimism',
+        'SUI': 'sui',
+        'TON': 'the-open-network',
     }
-    
+
     @classmethod
     def get_crypto_price(cls, symbol):
         """
-        Get harga crypto dari CoinGecko
-        
-        Args:
-            symbol (str): Crypto symbol (e.g., 'BTC', 'ETH')
-        
+        Get harga crypto dari CoinGecko (dalam IDR)
+
         Returns:
-            dict: {
-                'symbol': 'BTC',
-                'name': 'Bitcoin',
-                'current_price': 700000000,  # dalam IDR
-                'price_change_24h': 2.5,  # persentase
-                'last_updated': datetime
-            }
+            dict | None
         """
-        # Cek cache dulu (5 menit)
-        cache_key = f"crypto_price_{symbol}"
+        cache_key = f"crypto_price_{symbol.upper()}"
         cached = cache.get(cache_key)
         if cached:
             return cached
-        
+
         try:
-            # Convert symbol ke CoinGecko ID
-            coin_id = cls.CRYPTO_ID_MAPPING.get(symbol.upper())
-            if not coin_id:
-                # Jika tidak ada di mapping, coba lowercase symbol
-                coin_id = symbol.lower()
-            
-            # Call CoinGecko API
+            coin_id = cls.CRYPTO_ID_MAPPING.get(symbol.upper(), symbol.lower())
+
             url = f"{cls.COINGECKO_API_URL}/simple/price"
             params = {
                 'ids': coin_id,
-                'vs_currencies': 'idr',  # Harga dalam IDR
+                'vs_currencies': 'idr',
                 'include_24hr_change': 'true',
             }
-            
-            response = requests.get(url, params=params, timeout=10)
+
+            response = requests.get(url, params=params, headers=_HEADERS, timeout=10)
             response.raise_for_status()
-            
             data = response.json()
-            
+
             if coin_id not in data:
+                print(f"CoinGecko: {coin_id} not found in response. Keys: {list(data.keys())}")
                 return None
-            
+
             coin_data = data[coin_id]
-            
+            idr_price = coin_data.get('idr')
+            if not idr_price:
+                print(f"CoinGecko: no IDR price for {coin_id}")
+                return None
+
             result = {
                 'symbol': symbol.upper(),
                 'name': cls._get_crypto_name(symbol),
-                'current_price': Decimal(str(coin_data['idr'])),
+                'current_price': Decimal(str(idr_price)),
                 'price_change_24h': Decimal(str(coin_data.get('idr_24h_change', 0))),
                 'last_updated': timezone.now(),
+                'currency': 'IDR',
             }
-            
-            # Cache untuk 5 menit
-            cache.set(cache_key, result, 300)
-            
+
+            cache.set(cache_key, result, 300)  # cache 5 menit
+            print(f"CoinGecko OK: {symbol.upper()} = {idr_price} IDR")
             return result
-            
-        except Exception as e:
-            print(f"Error fetching crypto price for {symbol}: {str(e)}")
+
+        except requests.exceptions.HTTPError as e:
+            if e.response is not None and e.response.status_code == 429:
+                print(f"CoinGecko rate-limited for {symbol}. Will retry without cache next time.")
+            else:
+                print(f"CoinGecko HTTP error for {symbol}: {e}")
             return None
-    
+        except Exception as e:
+            print(f"CoinGecko error for {symbol}: {e}")
+            return None
+
     @classmethod
     def get_multiple_crypto_prices(cls, symbols):
         """
-        Get harga multiple crypto sekaligus (lebih efisien)
-        
-        Args:
-            symbols (list): List of crypto symbols ['BTC', 'ETH', 'DOGE']
-        
-        Returns:
-            dict: {
-                'BTC': {...},
-                'ETH': {...},
-            }
+        Get harga multiple crypto sekaligus (lebih efisien, satu request)
         """
         results = {}
-        
-        # Convert symbols ke CoinGecko IDs
+
         coin_ids = []
         symbol_to_id = {}
         for symbol in symbols:
             coin_id = cls.CRYPTO_ID_MAPPING.get(symbol.upper(), symbol.lower())
             coin_ids.append(coin_id)
             symbol_to_id[coin_id] = symbol.upper()
-        
+
         try:
-            # Call CoinGecko API
             url = f"{cls.COINGECKO_API_URL}/simple/price"
             params = {
                 'ids': ','.join(coin_ids),
                 'vs_currencies': 'idr',
                 'include_24hr_change': 'true',
             }
-            
-            response = requests.get(url, params=params, timeout=10)
+
+            response = requests.get(url, params=params, headers=_HEADERS, timeout=10)
             response.raise_for_status()
-            
             data = response.json()
-            
+
             for coin_id, coin_data in data.items():
                 symbol = symbol_to_id.get(coin_id)
                 if symbol:
-                    results[symbol] = {
-                        'symbol': symbol,
-                        'name': cls._get_crypto_name(symbol),
-                        'current_price': Decimal(str(coin_data['idr'])),
-                        'price_change_24h': Decimal(str(coin_data.get('idr_24h_change', 0))),
-                        'last_updated': timezone.now(),
-                    }
-            
+                    idr_price = coin_data.get('idr')
+                    if idr_price:
+                        results[symbol] = {
+                            'symbol': symbol,
+                            'name': cls._get_crypto_name(symbol),
+                            'current_price': Decimal(str(idr_price)),
+                            'price_change_24h': Decimal(str(coin_data.get('idr_24h_change', 0))),
+                            'last_updated': timezone.now(),
+                            'currency': 'IDR',
+                        }
+                        print(f"CoinGecko batch OK: {symbol} = {idr_price} IDR")
+
             return results
-            
-        except Exception as e:
-            print(f"Error fetching multiple crypto prices: {str(e)}")
+
+        except requests.exceptions.HTTPError as e:
+            if e.response is not None and e.response.status_code == 429:
+                print("CoinGecko rate-limited on batch request. Trying one-by-one...")
+                # Fallback: ambil satu-satu dengan jeda
+                for symbol in symbols:
+                    result = cls.get_crypto_price(symbol)
+                    if result:
+                        results[symbol.upper()] = result
+                    time.sleep(0.5)  # jeda 0.5 detik antar request
+                return results
+            print(f"CoinGecko batch HTTP error: {e}")
             return {}
-    
+        except Exception as e:
+            print(f"CoinGecko batch error: {e}")
+            return {}
+
     # ══════════════════════════════════════════════════════════════════════════
-    # STOCK PRICE API (Indonesia)
+    # STOCK PRICE API (IDX Indonesia + Global NYSE/NASDAQ)
     # ══════════════════════════════════════════════════════════════════════════
-    
+
+    # Simbol saham global yang diketahui (tidak pakai suffix .JK)
+    KNOWN_GLOBAL_STOCKS = {
+        # US Tech
+        'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'META', 'NVDA', 'TSLA',
+        'NFLX', 'ADBE', 'CRM', 'ORCL', 'IBM', 'INTC', 'AMD', 'QCOM',
+        'AVGO', 'TXN', 'MU', 'AMAT', 'LRCX',
+        # US Finance
+        'JPM', 'BAC', 'WFC', 'GS', 'MS', 'C', 'AXP', 'V', 'MA', 'PYPL',
+        'BRKB', 'BRKA',
+        # US Consumer
+        'AMZN', 'WMT', 'COST', 'HD', 'NKE', 'MCD', 'SBUX', 'DIS',
+        'NFLX', 'CMCSA',
+        # US Healthcare
+        'JNJ', 'PFE', 'MRK', 'ABBV', 'LLY', 'UNH', 'CVS',
+        # Other Global
+        'TSM', 'BABA', 'TCEHY', 'UBER', 'LYFT', 'SNAP', 'TWTR',
+        'SPOT', 'HOOD', 'COIN',
+        # SGX Singapore
+        'D05', 'O39', 'U11',
+    }
+
     @classmethod
-    def get_stock_price(cls, symbol):
-        """
-        Get harga saham Indonesia
-        
-        Menggunakan beberapa sumber:
-        1. Yahoo Finance API (untuk saham IDX)
-        2. Alternatif: RapidAPI Indonesian Stock
-        
-        Args:
-            symbol (str): Stock ticker (e.g., 'BBCA', 'TLKM')
-        
-        Returns:
-            dict: {
-                'symbol': 'BBCA',
-                'name': 'Bank BCA',
-                'current_price': 9000,
-                'price_change_24h': 1.5,
-                'last_updated': datetime
-            }
-        """
-        # Cek cache dulu
-        cache_key = f"stock_price_{symbol}"
+    def get_usd_to_idr_rate(cls):
+        """Fetch kurs USD/IDR real-time dari Yahoo Finance"""
+        cache_key = "usd_idr_rate"
         cached = cache.get(cache_key)
         if cached:
             return cached
-        
+
         try:
-            # Method 1: Yahoo Finance (gratis)
+            url = "https://query1.finance.yahoo.com/v8/finance/chart/USDIDR=X"
+            params = {'interval': '1d', 'range': '1d'}
+            response = requests.get(url, params=params, headers=_HEADERS, timeout=8)
+            response.raise_for_status()
+            data = response.json()
+            result_list = data.get('chart', {}).get('result')
+            if result_list:
+                rate = result_list[0].get('meta', {}).get('regularMarketPrice', 16000)
+                cache.set(cache_key, rate, 3600)  # cache 1 jam
+                print(f"USD/IDR rate: {rate}")
+                return rate
+        except Exception as e:
+            print(f"USD/IDR fetch error: {e}")
+
+        return 16000  # fallback kurs default
+
+    @classmethod
+    def get_stock_price(cls, symbol):
+        """
+        Get harga saham — auto-detect IDX vs Global
+
+        - IDX:    fetch SYMBOL.JK (harga dalam IDR)
+        - Global: fetch SYMBOL (harga dalam USD, konversi ke IDR)
+        """
+        cache_key = f"stock_price_{symbol.upper()}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        try:
             result = cls._get_stock_price_yahoo(symbol)
-            
             if result:
-                # Cache untuk 5 menit (market hours) atau 1 jam (after hours)
                 cache_timeout = 300 if cls._is_market_hours() else 3600
                 cache.set(cache_key, result, cache_timeout)
                 return result
-            
             return None
-            
+
         except Exception as e:
-            print(f"Error fetching stock price for {symbol}: {str(e)}")
+            print(f"get_stock_price error for {symbol}: {e}")
             return None
-    
+
     @classmethod
     def _get_stock_price_yahoo(cls, symbol):
-        """Get stock price dari Yahoo Finance"""
-        # Yahoo Finance format untuk IDX: SYMBOL.JK
-        yahoo_symbol = f"{symbol.upper()}.JK"
-        
-        # Header agar tidak diblokir Yahoo Finance
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json',
-        }
-        
-        # Coba dari query1 dan query2 sebagai fallback
+        """
+        Fetch dari Yahoo Finance.
+        - Coba SYMBOL.JK dulu (IDX Indonesia)
+        - Kalau gagal, coba SYMBOL langsung (global/US stocks)
+        """
+        sym_upper = symbol.upper()
+
+        # Tentukan apakah saham global atau IDX
+        is_global = sym_upper in cls.KNOWN_GLOBAL_STOCKS
+
+        if is_global:
+            # Langsung coba global
+            candidates = [sym_upper]
+        else:
+            # Coba IDX dulu, fallback ke global
+            candidates = [f"{sym_upper}.JK", sym_upper]
+
+        for yahoo_symbol in candidates:
+            result = cls._fetch_yahoo(yahoo_symbol, symbol)
+            if result:
+                return result
+
+        print(f"Yahoo Finance: semua kandidat gagal untuk {sym_upper}")
+        return None
+
+    @classmethod
+    def _fetch_yahoo(cls, yahoo_symbol, original_symbol):
+        """Helper: fetch satu symbol dari Yahoo Finance"""
+        is_idr = yahoo_symbol.endswith('.JK')
+
         urls = [
             f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
             f"https://query2.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
         ]
-        
-        params = {
-            'interval': '1d',
-            'range': '1d',
-        }
-        
+        params = {'interval': '1d', 'range': '1d'}
+
         for url in urls:
             try:
-                response = requests.get(url, params=params, headers=headers, timeout=10)
+                response = requests.get(url, params=params, headers=_HEADERS, timeout=10)
                 response.raise_for_status()
-                
                 data = response.json()
-                
-                # Validasi struktur response
+
                 chart = data.get('chart', {})
                 result_list = chart.get('result')
-                
-                if not result_list or len(result_list) == 0:
-                    error_msg = chart.get('error', {}).get('description', 'No data')
-                    print(f"Yahoo Finance: no result for {yahoo_symbol} - {error_msg}")
-                    continue  # Coba URL berikutnya
-                
-                result = result_list[0]
-                meta = result.get('meta', {})
-                
-                current_price = meta.get('regularMarketPrice') or meta.get('chartPreviousClose')
-                
-                if not current_price:
-                    print(f"Yahoo Finance: current_price not found in meta for {yahoo_symbol}")
+
+                if not result_list:
+                    error_desc = (chart.get('error') or {}).get('description', 'No data')
+                    print(f"Yahoo Finance: no result for {yahoo_symbol} — {error_desc}")
                     continue
-                
-                previous_close = meta.get('previousClose') or meta.get('chartPreviousClose') or current_price
-                
-                # Hitung perubahan persentase
-                if previous_close and previous_close > 0:
-                    price_change = ((current_price - previous_close) / previous_close) * 100
+
+                meta = result_list[0].get('meta', {})
+                current_price = meta.get('regularMarketPrice') or meta.get('chartPreviousClose')
+
+                if not current_price:
+                    print(f"Yahoo Finance: no price in meta for {yahoo_symbol}")
+                    continue
+
+                previous_close = (
+                    meta.get('previousClose')
+                    or meta.get('chartPreviousClose')
+                    or current_price
+                )
+
+                # Konversi USD → IDR kalau bukan saham IDX
+                if is_idr:
+                    price_idr = current_price
+                    prev_idr = previous_close
                 else:
-                    price_change = 0
-                
-                print(f"Yahoo Finance OK: {yahoo_symbol} = {current_price} IDR")
-                
+                    usd_rate = cls.get_usd_to_idr_rate()
+                    price_idr = current_price * usd_rate
+                    prev_idr = previous_close * usd_rate
+
+                # Hitung % perubahan
+                if prev_idr and prev_idr > 0:
+                    price_change_pct = ((price_idr - prev_idr) / prev_idr) * 100
+                else:
+                    price_change_pct = 0
+
+                print(
+                    f"Yahoo Finance OK: {yahoo_symbol} = "
+                    f"{'IDR' if is_idr else 'USD→IDR'} {price_idr:.2f}"
+                )
+
                 return {
-                    'symbol': symbol.upper(),
-                    'name': cls._get_stock_name(symbol),
-                    'current_price': Decimal(str(current_price)),
-                    'price_change_24h': Decimal(str(round(price_change, 2))),
+                    'symbol': original_symbol.upper(),
+                    'name': cls._get_stock_name(original_symbol),
+                    'current_price': Decimal(str(round(price_idr, 2))),
+                    'price_change_24h': Decimal(str(round(price_change_pct, 2))),
                     'last_updated': timezone.now(),
+                    'currency': 'IDR',
+                    'market': 'IDX' if is_idr else 'GLOBAL',
                 }
-                
+
             except Exception as e:
-                print(f"Yahoo Finance error for {yahoo_symbol} from {url}: {str(e)}")
-                continue  # Coba URL berikutnya
-        
-        print(f"Yahoo Finance: semua URL gagal untuk {yahoo_symbol}")
+                print(f"Yahoo Finance error for {yahoo_symbol} from {url}: {e}")
+                continue
+
         return None
-    
+
     @classmethod
     def get_multiple_stock_prices(cls, symbols):
-        """Get harga multiple saham sekaligus"""
+        """Get harga multiple saham"""
         results = {}
-        
         for symbol in symbols:
             price_data = cls.get_stock_price(symbol)
             if price_data:
                 results[symbol.upper()] = price_data
-        
         return results
-    
+
     # ══════════════════════════════════════════════════════════════════════════
     # HELPER METHODS
     # ══════════════════════════════════════════════════════════════════════════
-    
+
     @staticmethod
     def _get_crypto_name(symbol):
         """Get full name untuk crypto"""
         names = {
-            'BTC': 'Bitcoin',
-            'ETH': 'Ethereum',
-            'BNB': 'Binance Coin',
-            'USDT': 'Tether',
-            'USDC': 'USD Coin',
-            'XRP': 'Ripple',
-            'ADA': 'Cardano',
-            'DOGE': 'Dogecoin',
-            'SOL': 'Solana',
-            'DOT': 'Polkadot',
-            'MATIC': 'Polygon',
-            'SHIB': 'Shiba Inu',
-            'AVAX': 'Avalanche',
-            'TRX': 'Tron',
-            'LINK': 'Chainlink',
+            'BTC': 'Bitcoin', 'ETH': 'Ethereum', 'BNB': 'Binance Coin',
+            'USDT': 'Tether', 'USDC': 'USD Coin', 'XRP': 'Ripple',
+            'ADA': 'Cardano', 'DOGE': 'Dogecoin', 'SOL': 'Solana',
+            'DOT': 'Polkadot', 'MATIC': 'Polygon', 'SHIB': 'Shiba Inu',
+            'AVAX': 'Avalanche', 'TRX': 'Tron', 'LINK': 'Chainlink',
+            'LTC': 'Litecoin', 'ATOM': 'Cosmos', 'UNI': 'Uniswap',
+            'XLM': 'Stellar', 'ALGO': 'Algorand', 'FIL': 'Filecoin',
+            'NEAR': 'NEAR Protocol', 'APT': 'Aptos', 'ARB': 'Arbitrum',
+            'OP': 'Optimism', 'SUI': 'Sui', 'TON': 'Toncoin',
         }
         return names.get(symbol.upper(), symbol.upper())
-    
+
     @staticmethod
     def _get_stock_name(symbol):
-        """Get full name untuk saham Indonesia"""
+        """Get full name untuk saham"""
         names = {
-            # Bank
-            'BBCA': 'Bank BCA',
-            'BBRI': 'Bank BRI',
-            'BMRI': 'Bank Mandiri',
-            'BBNI': 'Bank BNI',
-            'BBTN': 'Bank BTN',
-            # Telco
-            'TLKM': 'Telkom Indonesia',
-            'ISAT': 'Indosat Ooredoo',
-            'EXCL': 'XL Axiata',
-            # Energi & Tambang
-            'ANTM': 'Aneka Tambang',
-            'PGAS': 'Perusahaan Gas Negara',
-            'ADRO': 'Adaro Energy',
-            'PTBA': 'Bukit Asam',
-            'BUMI': 'Bumi Resources',
-            'ITMG': 'Indo Tambangraya Megah',
-            'HRUM': 'Harum Energy',
-            'INCO': 'Vale Indonesia',
-            'TINS': 'Timah',
-            'MDKA': 'Merdeka Copper Gold',
-            # Consumer
-            'ICBP': 'Indofood CBP',
-            'INDF': 'Indofood Sukses Makmur',
-            'GGRM': 'Gudang Garam',
-            'HMSP': 'HM Sampoerna',
-            'KLBF': 'Kalbe Farma',
-            'SIDO': 'Industri Jamu Sido Muncul',
-            'UNVR': 'Unilever Indonesia',
-            # Otomotif & Industri
-            'ASII': 'Astra International',
-            'UNTR': 'United Tractors',
-            # Properti & Konstruksi
-            'SMGR': 'Semen Indonesia',
-            'INTP': 'Indocement',
-            'INKP': 'Indah Kiat Pulp',
-            # Keuangan
-            'BJBR': 'Bank BJB',
-            'BRIS': 'Bank BRI Syariah',
+            # Saham Indonesia (IDX)
+            'BBCA': 'Bank BCA', 'BBRI': 'Bank BRI', 'BMRI': 'Bank Mandiri',
+            'BBNI': 'Bank BNI', 'BBTN': 'Bank BTN', 'TLKM': 'Telkom Indonesia',
+            'ISAT': 'Indosat Ooredoo', 'EXCL': 'XL Axiata',
+            'ANTM': 'Aneka Tambang', 'PGAS': 'Perusahaan Gas Negara',
+            'ADRO': 'Adaro Energy', 'PTBA': 'Bukit Asam',
+            'BUMI': 'Bumi Resources', 'ITMG': 'Indo Tambangraya Megah',
+            'HRUM': 'Harum Energy', 'INCO': 'Vale Indonesia',
+            'TINS': 'Timah', 'MDKA': 'Merdeka Copper Gold',
+            'ICBP': 'Indofood CBP', 'INDF': 'Indofood Sukses Makmur',
+            'GGRM': 'Gudang Garam', 'HMSP': 'HM Sampoerna',
+            'KLBF': 'Kalbe Farma', 'SIDO': 'Industri Jamu Sido Muncul',
+            'UNVR': 'Unilever Indonesia', 'ASII': 'Astra International',
+            'UNTR': 'United Tractors', 'SMGR': 'Semen Indonesia',
+            'INTP': 'Indocement', 'INKP': 'Indah Kiat Pulp',
+            'BJBR': 'Bank BJB', 'BRIS': 'Bank BRI Syariah',
+            'GOTO': 'GoTo Gojek Tokopedia', 'BREN': 'Barito Renewables',
+            'AMMN': 'Amman Mineral', 'EMTK': 'Elang Mahkota Teknologi',
+            # Saham Global
+            'AAPL': 'Apple Inc.', 'MSFT': 'Microsoft Corp.',
+            'GOOGL': 'Alphabet Inc.', 'GOOG': 'Alphabet Inc.',
+            'AMZN': 'Amazon.com Inc.', 'META': 'Meta Platforms',
+            'NVDA': 'NVIDIA Corp.', 'TSLA': 'Tesla Inc.',
+            'NFLX': 'Netflix Inc.', 'BABA': 'Alibaba Group',
+            'TSM': 'Taiwan Semiconductor', 'BRKB': 'Berkshire Hathaway',
+            'JPM': 'JPMorgan Chase', 'BAC': 'Bank of America',
+            'DIS': 'Walt Disney', 'PYPL': 'PayPal Holdings',
+            'UBER': 'Uber Technologies', 'COIN': 'Coinbase Global',
+            'AMD': 'Advanced Micro Devices', 'INTC': 'Intel Corp.',
+            'QCOM': 'Qualcomm Inc.', 'CRM': 'Salesforce Inc.',
         }
         return names.get(symbol.upper(), symbol.upper())
-    
+
     @staticmethod
     def _is_market_hours():
         """Cek apakah sekarang jam trading IDX (09:00-16:00 WIB, Mon-Fri)"""
-        from django.utils import timezone
         now = timezone.localtime()
-        
-        # Weekend?
-        if now.weekday() >= 5:  # Saturday=5, Sunday=6
+        if now.weekday() >= 5:
             return False
-        
-        # Trading hours: 09:00 - 16:00
         if now.hour < 9 or now.hour >= 16:
             return False
-        
         return True
-    
+
     @classmethod
     def search_crypto(cls, query):
-        """
-        Search crypto by name atau symbol
-        
-        Returns:
-            list: [
-                {'id': 'bitcoin', 'symbol': 'BTC', 'name': 'Bitcoin'},
-                ...
-            ]
-        """
+        """Search crypto by name atau symbol dari CoinGecko"""
         try:
             url = f"{cls.COINGECKO_API_URL}/search"
-            params = {'query': query}
-            
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(
+                url, params={'query': query}, headers=_HEADERS, timeout=10
+            )
             response.raise_for_status()
-            
-            data = response.json()
-            coins = data.get('coins', [])[:10]  # Top 10 results
-            
+            coins = response.json().get('coins', [])[:10]
             return [
-                {
-                    'id': coin['id'],
-                    'symbol': coin['symbol'].upper(),
-                    'name': coin['name'],
-                }
-                for coin in coins
+                {'id': c['id'], 'symbol': c['symbol'].upper(), 'name': c['name']}
+                for c in coins
             ]
-            
         except Exception as e:
-            print(f"Error searching crypto: {str(e)}")
+            print(f"CoinGecko search error: {e}")
             return []
