@@ -20,6 +20,8 @@ class ApiConfig {
       '$baseUrl/api/transactions/chat-input/';
   static String get chatInputEndpoint =>
       '$baseUrl/api/transactions/chat-input/';
+  static String get scanReceiptEndpoint =>
+      '$baseUrl/api/transactions/scan-receipt/';
 
   /// Flat list endpoint — returns List<Transaction> with category_type field
   static String get transactionListEndpoint => '$baseUrl/api/transactions/';

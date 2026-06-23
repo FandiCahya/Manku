@@ -4,6 +4,7 @@ import '../../data/transaction_repository.dart';
 import '../../../../models/transaction_api.dart';
 import '../../domain/chat_transaction_response.dart';
 import 'transaction_state.dart';
+import 'package:image_picker/image_picker.dart';
 
 class TransactionCubit extends Cubit<TransactionState> {
   TransactionCubit() : super(TransactionInitial());
@@ -146,6 +147,18 @@ class TransactionCubit extends Cubit<TransactionState> {
       emit(const TransactionSubmitSuccess(message: 'Transaksi berhasil disimpan dari Chat!'));
       // Reload history in background
       await fetchTransactionsAndReport();
+      return response;
+    } catch (e) {
+      emit(TransactionError(error: e.toString().replaceFirst('Exception: ', '')));
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> scanReceiptImage(XFile image) async {
+    emit(TransactionSubmitting());
+    try {
+      final response = await TransactionRepository.scanReceipt(image);
+      emit(const TransactionSubmitSuccess(message: 'Struk berhasil diproses!'));
       return response;
     } catch (e) {
       emit(TransactionError(error: e.toString().replaceFirst('Exception: ', '')));

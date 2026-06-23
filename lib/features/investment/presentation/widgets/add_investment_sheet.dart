@@ -15,7 +15,8 @@ class AddInvestmentSheet extends StatefulWidget {
 class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
   final _formKey = GlobalKey<FormState>();
 
-  String _assetType = 'crypto'; // 'crypto' or 'stock'
+  String _assetType = 'crypto'; // sent to backend: 'crypto' or 'stock'
+  String _marketType = 'crypto'; // UI selection: 'crypto' | 'stock_idn' | 'stock_global'
   final _symbolCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   final _quantityCtrl = TextEditingController();
@@ -50,7 +51,7 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
 
     try {
       await context.read<InvestmentCubit>().addInvestment(
-        assetType: _assetType,
+        assetType: _assetType, // 'crypto' or 'stock'
         symbol: _symbolCtrl.text.trim().toUpperCase(),
         name: _nameCtrl.text.trim(),
         quantity: double.parse(_quantityCtrl.text.trim()),
@@ -195,7 +196,7 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Asset Type Toggle
+                      // Asset Type Toggle — 3 pilihan
                       _label('Jenis Aset'),
                       const SizedBox(height: 8),
                       Container(
@@ -210,8 +211,12 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                               value: 'crypto',
                             ),
                             _assetTypeBtn(
-                              label: '📊 Saham',
-                              value: 'stock',
+                              label: '🇮🇩 Saham ID',
+                              value: 'stock_idn',
+                            ),
+                            _assetTypeBtn(
+                              label: '🌐 Saham Global',
+                              value: 'stock_global',
                             ),
                           ],
                         ),
@@ -230,7 +235,11 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                                 const SizedBox(height: 8),
                                 _textField(
                                   controller: _symbolCtrl,
-                                  hint: _assetType == 'crypto' ? 'BTC, ETH...' : 'BBCA, TLKM...',
+                                  hint: _marketType == 'crypto'
+                                      ? 'BTC, ETH, SOL...'
+                                      : _marketType == 'stock_idn'
+                                          ? 'BBCA, BUMI, TLKM...'
+                                          : 'AAPL, TSLA, NVDA...',
                                   inputFormatters: [
                                     FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
                                     LengthLimitingTextInputFormatter(10),
@@ -254,7 +263,11 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                                 const SizedBox(height: 8),
                                 _textField(
                                   controller: _nameCtrl,
-                                  hint: _assetType == 'crypto' ? 'Bitcoin' : 'Bank Central Asia',
+                                  hint: _marketType == 'crypto'
+                                      ? 'Bitcoin'
+                                      : _marketType == 'stock_idn'
+                                          ? 'Bank BCA'
+                                          : 'Apple Inc.',
                                   validator: (v) {
                                     if (v == null || v.trim().isEmpty) return 'Wajib diisi';
                                     return null;
@@ -274,7 +287,7 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _label(_assetType == 'crypto' ? 'Jumlah (Koin)' : 'Jumlah (Lot/Lembar)'),
+                                _label(_marketType == 'crypto' ? 'Jumlah (Koin)' : 'Jumlah (Lot/Lembar)'),
                                 const SizedBox(height: 8),
                                 _textField(
                                   controller: _quantityCtrl,
@@ -432,14 +445,20 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
   }
 
   Widget _assetTypeBtn({required String label, required String value}) {
-    final selected = _assetType == value;
+    final selected = _marketType == value;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _assetType = value),
+        onTap: () => setState(() {
+          _marketType = value;
+          // Map ke asset_type untuk backend
+          _assetType = value == 'crypto' ? 'crypto' : 'stock';
+          _symbolCtrl.clear();
+          _nameCtrl.clear();
+        }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.all(4),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: selected ? context.colors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
@@ -448,7 +467,7 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: selected
                   ? context.colors.onPrimary

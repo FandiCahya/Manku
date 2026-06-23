@@ -134,21 +134,55 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
         });
         await _saveChatHistory();
 
-        // TODO: Process image with OCR API
-        // For now, show placeholder response
-        await Future<void>.delayed(const Duration(seconds: 1));
+        final response = await context.read<TransactionCubit>().scanReceiptImage(image);
+        if (!mounted) return;
 
-        setState(() {
-          isLoading = false;
-          messages.add(
-            ChatMessage(
-              text:
-                  'Maaf, fitur pemrosesan gambar sedang dalam pengembangan.\n\nSilakan gunakan input teks untuk sementara.',
-              isUser: false,
-              timestamp: DateTime.now(),
-            ),
+        if (response != null && response['extracted_data'] != null) {
+          final extracted = response['extracted_data'];
+          final amount = extracted['amount']?.toString() ?? '0';
+          final description = extracted['description']?.toString() ?? '';
+          final categoryHint = extracted['category_hint']?.toString() ?? 'Lainnya';
+          
+          final now = DateTime.now();
+          final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+          // Simpan ke database
+          await context.read<TransactionCubit>().addManualTransaction(
+            amount: amount,
+            categoryHint: categoryHint,
+            description: description,
+            date: dateStr,
+            time: timeStr,
+            type: 'expense', // Struk biasanya expense
           );
-        });
+
+          if (!mounted) return;
+
+          setState(() {
+            isLoading = false;
+            messages.add(
+              ChatMessage(
+                text: '✅ Struk tersimpan!\n💰 Rp$amount | $categoryHint\n📝 $description\n⏰ $timeStr • ${now.day}/${now.month}/${now.year}',
+                isUser: false,
+                timestamp: now,
+                isParsed: true,
+              ),
+            );
+          });
+          widget.onTransactionSaved?.call();
+        } else {
+          setState(() {
+            isLoading = false;
+            messages.add(
+              ChatMessage(
+                text: 'Maaf, gagal memproses struk. Coba foto ulang dengan lebih jelas.',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ),
+            );
+          });
+        }
         await _saveChatHistory();
       }
     } catch (e) {

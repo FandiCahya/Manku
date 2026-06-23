@@ -4,12 +4,99 @@ import '../../../../core/constants/colors.dart';
 import '../cubit/investment_cubit.dart';
 import '../cubit/investment_state.dart';
 import '../widgets/add_investment_sheet.dart';
+import '../widgets/edit_investment_sheet.dart';
 import '../widgets/portfolio_summary_card.dart';
 import '../widgets/investment_card.dart';
 import '../../../dashboard/presentation/cubit/dashboard_cubit.dart';
+import '../../domain/investment_models.dart';
 
 class InvestmentTab extends StatelessWidget {
   const InvestmentTab({super.key});
+
+  Future<void> _openEditSheet(BuildContext context, Investment investment) async {
+    final cubit = context.read<InvestmentCubit>();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: EditInvestmentSheet(investment: investment),
+      ),
+    );
+    cubit.loadInvestments();
+    context.read<DashboardCubit>().fetchSummary();
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Investment investment) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1D3448) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.red, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Text('Hapus Investment',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87)),
+          ],
+        ),
+        content: RichText(
+          text: TextSpan(
+            style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white70 : Colors.black54),
+            children: [
+              const TextSpan(text: 'Yakin hapus '),
+              TextSpan(
+                text: '${investment.symbol} (${investment.name})',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: ' dari portofolio?\nData tidak bisa dipulihkan.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal',
+                style: TextStyle(color: context.colors.onSurfaceVariant)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hapus',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await context.read<InvestmentCubit>().deleteInvestment(investment.id);
+      if (context.mounted) {
+        context.read<DashboardCubit>().fetchSummary();
+      }
+    }
+  }
 
   Future<void> _openAddSheet(BuildContext context) async {
     final cubit = context.read<InvestmentCubit>();
@@ -98,9 +185,9 @@ class InvestmentTab extends StatelessWidget {
                     ...state.investments.map((investment) {
                       return InvestmentCard(
                         investment: investment,
-                        onTap: () {
-                          // Navigate to investment detail (future)
-                        },
+                        onTap: () {},
+                        onEdit: () => _openEditSheet(context, investment),
+                        onDelete: () => _confirmDelete(context, investment),
                       );
                     }),
 

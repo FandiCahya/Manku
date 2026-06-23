@@ -8,6 +8,8 @@ import '../models/transaction_api.dart';
 import '../models/report_summary.dart';
 import '../features/transactions/domain/chat_transaction_response.dart';
 import '../widgets/debug_info_overlay.dart';
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 
 class TransactionService {
   // ── 1. TAMBAH TRANSAKSI ────────────────────────────────────────────────────
@@ -776,6 +778,31 @@ class TransactionService {
       }
     } catch (e) {
       debugPrint('saveChatTransaction error: $e');
+      rethrow;
+    }
+  }
+
+  // ── 8. SCAN RECEIPT ────────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>?> scanReceipt(XFile image) async {
+    try {
+      final formData = FormData.fromMap({
+        'receipt_image': await MultipartFile.fromFile(
+          image.path,
+          filename: image.name,
+        ),
+      });
+
+      final response = await ApiClient.dio.post<Map<String, dynamic>>(
+        ApiConfig.scanReceiptEndpoint,
+        data: formData,
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('scanReceipt error: $e');
       rethrow;
     }
   }

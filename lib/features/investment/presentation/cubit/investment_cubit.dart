@@ -51,6 +51,32 @@ class InvestmentCubit extends Cubit<InvestmentState> {
     }
   }
 
+  Future<void> editInvestment({
+    required String id,
+    double? quantity,
+    double? buyPrice,
+    String? notes,
+  }) async {
+    final currentState = state;
+    emit(InvestmentSubmitting());
+    try {
+      await InvestmentRepository.updateInvestment(
+        id: id,
+        quantity: quantity,
+        buyPrice: buyPrice,
+        notes: notes,
+      );
+      emit(InvestmentSubmitSuccess('Investment berhasil diperbarui!'));
+      await loadInvestments();
+    } catch (e) {
+      debugPrint('InvestmentCubit Error (edit): $e');
+      emit(InvestmentError(e.toString()));
+      if (currentState is InvestmentLoaded) {
+        emit(currentState);
+      }
+    }
+  }
+
   Future<void> deleteInvestment(String id) async {
     final currentState = state;
     emit(InvestmentSubmitting());

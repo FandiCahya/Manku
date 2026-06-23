@@ -97,8 +97,16 @@ List<Color> _gradientForSymbol(String symbol, bool isCrypto) {
 class InvestmentCard extends StatelessWidget {
   final Investment investment;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const InvestmentCard({required this.investment, this.onTap, super.key});
+  const InvestmentCard({
+    required this.investment,
+    this.onTap,
+    this.onEdit,
+    this.onDelete,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -265,6 +273,54 @@ class InvestmentCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                    const SizedBox(width: 4),
+                    // ⋮ Menu Edit & Delete
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        size: 20,
+                        color: isDark ? Colors.white54 : context.colors.onSurfaceVariant,
+                      ),
+                      color: isDark ? const Color(0xFF243447) : Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 4,
+                      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Row(children: [
+                            const Icon(Icons.edit_rounded,
+                                size: 18, color: Colors.orange),
+                            const SizedBox(width: 10),
+                            Text('Edit',
+                                style: TextStyle(
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontWeight: FontWeight.w500)),
+                          ]),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(children: [
+                            const Icon(Icons.delete_outline_rounded,
+                                size: 18, color: Colors.red),
+                            const SizedBox(width: 10),
+                            const Text('Hapus',
+                                style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w500)),
+                          ]),
+                        ),
+                      ],
+                      onSelected: (val) {
+                        if (val == 'edit') {
+                          onEdit?.call();
+                        } else if (val == 'delete') {
+                          onDelete?.call();
+                        }
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

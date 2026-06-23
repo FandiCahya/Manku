@@ -2,6 +2,7 @@ import '../../../models/transaction_api.dart';
 import '../../../models/report_summary.dart';
 import '../domain/chat_transaction_response.dart';
 import '../../../services/transaction_service.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// Repository for Transaction using Offline-First SQLite approach.
 class TransactionRepository {
@@ -61,5 +62,9 @@ class TransactionRepository {
     String text,
   ) async {
     return await TransactionService.saveChatTransaction(text);
+  }
+
+  static Future<Map<String, dynamic>?> scanReceipt(XFile image) async {
+    return await TransactionService.scanReceipt(image);
   }
 }
