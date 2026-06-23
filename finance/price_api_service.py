@@ -207,48 +207,75 @@ class PriceAPIService:
     @classmethod
     def _get_stock_price_yahoo(cls, symbol):
         """Get stock price dari Yahoo Finance"""
-        try:
-            # Yahoo Finance format untuk IDX: SYMBOL.JK
-            yahoo_symbol = f"{symbol.upper()}.JK"
-            
-            # Yahoo Finance API (unofficial)
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}"
-            params = {
-                'interval': '1d',
-                'range': '1d',
-            }
-            
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            if 'chart' not in data or 'result' not in data['chart']:
-                return None
-            
-            result = data['chart']['result'][0]
-            meta = result['meta']
-            
-            current_price = meta.get('regularMarketPrice', 0)
-            previous_close = meta.get('previousClose', current_price)
-            
-            # Hitung perubahan persentase
-            if previous_close > 0:
-                price_change = ((current_price - previous_close) / previous_close) * 100
-            else:
-                price_change = 0
-            
-            return {
-                'symbol': symbol.upper(),
-                'name': cls._get_stock_name(symbol),
-                'current_price': Decimal(str(current_price)),
-                'price_change_24h': Decimal(str(price_change)),
-                'last_updated': timezone.now(),
-            }
-            
-        except Exception as e:
-            print(f"Yahoo Finance error for {symbol}: {str(e)}")
-            return None
+        # Yahoo Finance format untuk IDX: SYMBOL.JK
+        yahoo_symbol = f"{symbol.upper()}.JK"
+        
+        # Header agar tidak diblokir Yahoo Finance
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+        }
+        
+        # Coba dari query1 dan query2 sebagai fallback
+        urls = [
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
+            f"https://query2.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
+        ]
+        
+        params = {
+            'interval': '1d',
+            'range': '1d',
+        }
+        
+        for url in urls:
+            try:
+                response = requests.get(url, params=params, headers=headers, timeout=10)
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                # Validasi struktur response
+                chart = data.get('chart', {})
+                result_list = chart.get('result')
+                
+                if not result_list or len(result_list) == 0:
+                    error_msg = chart.get('error', {}).get('description', 'No data')
+                    print(f"Yahoo Finance: no result for {yahoo_symbol} - {error_msg}")
+                    continue  # Coba URL berikutnya
+                
+                result = result_list[0]
+                meta = result.get('meta', {})
+                
+                current_price = meta.get('regularMarketPrice') or meta.get('chartPreviousClose')
+                
+                if not current_price:
+                    print(f"Yahoo Finance: current_price not found in meta for {yahoo_symbol}")
+                    continue
+                
+                previous_close = meta.get('previousClose') or meta.get('chartPreviousClose') or current_price
+                
+                # Hitung perubahan persentase
+                if previous_close and previous_close > 0:
+                    price_change = ((current_price - previous_close) / previous_close) * 100
+                else:
+                    price_change = 0
+                
+                print(f"Yahoo Finance OK: {yahoo_symbol} = {current_price} IDR")
+                
+                return {
+                    'symbol': symbol.upper(),
+                    'name': cls._get_stock_name(symbol),
+                    'current_price': Decimal(str(current_price)),
+                    'price_change_24h': Decimal(str(round(price_change, 2))),
+                    'last_updated': timezone.now(),
+                }
+                
+            except Exception as e:
+                print(f"Yahoo Finance error for {yahoo_symbol} from {url}: {str(e)}")
+                continue  # Coba URL berikutnya
+        
+        print(f"Yahoo Finance: semua URL gagal untuk {yahoo_symbol}")
+        return None
     
     @classmethod
     def get_multiple_stock_prices(cls, symbols):
@@ -292,21 +319,45 @@ class PriceAPIService:
     def _get_stock_name(symbol):
         """Get full name untuk saham Indonesia"""
         names = {
+            # Bank
             'BBCA': 'Bank BCA',
             'BBRI': 'Bank BRI',
             'BMRI': 'Bank Mandiri',
+            'BBNI': 'Bank BNI',
+            'BBTN': 'Bank BTN',
+            # Telco
             'TLKM': 'Telkom Indonesia',
-            'ASII': 'Astra International',
-            'UNVR': 'Unilever Indonesia',
-            'ICBP': 'Indofood CBP',
-            'INDF': 'Indofood Sukses Makmur',
-            'GGRM': 'Gudang Garam',
-            'KLBF': 'Kalbe Farma',
+            'ISAT': 'Indosat Ooredoo',
+            'EXCL': 'XL Axiata',
+            # Energi & Tambang
             'ANTM': 'Aneka Tambang',
             'PGAS': 'Perusahaan Gas Negara',
             'ADRO': 'Adaro Energy',
-            'INKP': 'Indah Kiat Pulp',
             'PTBA': 'Bukit Asam',
+            'BUMI': 'Bumi Resources',
+            'ITMG': 'Indo Tambangraya Megah',
+            'HRUM': 'Harum Energy',
+            'INCO': 'Vale Indonesia',
+            'TINS': 'Timah',
+            'MDKA': 'Merdeka Copper Gold',
+            # Consumer
+            'ICBP': 'Indofood CBP',
+            'INDF': 'Indofood Sukses Makmur',
+            'GGRM': 'Gudang Garam',
+            'HMSP': 'HM Sampoerna',
+            'KLBF': 'Kalbe Farma',
+            'SIDO': 'Industri Jamu Sido Muncul',
+            'UNVR': 'Unilever Indonesia',
+            # Otomotif & Industri
+            'ASII': 'Astra International',
+            'UNTR': 'United Tractors',
+            # Properti & Konstruksi
+            'SMGR': 'Semen Indonesia',
+            'INTP': 'Indocement',
+            'INKP': 'Indah Kiat Pulp',
+            # Keuangan
+            'BJBR': 'Bank BJB',
+            'BRIS': 'Bank BRI Syariah',
         }
         return names.get(symbol.upper(), symbol.upper())
     

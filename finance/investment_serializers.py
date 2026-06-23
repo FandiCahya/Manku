@@ -33,7 +33,15 @@ class InvestmentSerializer(serializers.ModelSerializer):
     def get_current_price(self, obj):
         """Get current price dari context atau API"""
         # Price akan diinject dari view
-        return self.context.get('prices', {}).get(obj.symbol, {}).get('current_price', 0)
+        # Return None (bukan 0) jika harga tidak tersedia
+        price = self.context.get('prices', {}).get(obj.symbol, {})
+        if not price:
+            return None
+        current_price = price.get('current_price')
+        # Jika current_price adalah Decimal/int 0, tetap return None (belum ada data)
+        if current_price is None or current_price == 0:
+            return None
+        return float(current_price)
     
     def get_current_value(self, obj):
         """Calculate current value"""
