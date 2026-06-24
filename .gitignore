@@ -1,14 +1,36 @@
-# Virtual Environments
+# ── Virtual Environments ──────────────────────────────────────────────────────
 venv/
 env/
+.venv/
 
-# Python Cache
+# ── Environment Variables (JANGAN DI-PUSH — berisi API keys & passwords) ──────
+.env
+.env.*
+
+# ── Python Cache ──────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
 
-# Database Lokal (agar data ujicoba tidak ikut ter-push)
+# ── Database Lokal ────────────────────────────────────────────────────────────
 db.sqlite3
+*.db
 
-# Windows temporary files
+# ── Django ────────────────────────────────────────────────────────────────────
+staticfiles/
+media/
+
+# ── OS Files ──────────────────────────────────────────────────────────────────
 Thumbs.db
+.DS_Store
+desktop.ini
+
+# ── IDE / Editor ──────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo

@@ -20,7 +20,7 @@ from .serializers import BudgetSerializer, CategorySerializer, TransactionSerial
 client = Groq(api_key="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")
 
 # Model selection dengan fallback
-VISION_MODEL = "llama-3.2-11b-vision-preview"  # Has built-in vision support
+VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"  # Replacement for deprecated llama-3.2-11b-vision-preview
 TEXT_MODEL = "llama-3.3-70b-versatile"  # For text-only tasks
 AUDIO_MODEL = "whisper-large-v3"  # For speech-to-text
 
