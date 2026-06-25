@@ -143,7 +143,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _StatColumn(
-                            label: 'Total Tujuan',
+                            label: 'Total Goals',
                             value: '$totalGoals',
                             icon: Icons.flag_outlined,
                             color: context.colors.lavender,
@@ -156,7 +156,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                                 : context.colors.outlineVariant.withValues(alpha: 0.3),
                           ),
                           _StatColumn(
-                            label: 'Tercapai',
+                            label: 'Completed Goals',
                             value: '$completedGoals',
                             icon: Icons.check_circle_outline,
                             color: context.colors.mint,
@@ -249,7 +249,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Tap untuk lihat detail',
+                                'Tap to see details',
                                 style: GoogleFonts.nunito(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
