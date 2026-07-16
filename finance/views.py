@@ -1,7 +1,8 @@
 import base64
 import json
-from io import BytesIO
-from datetime import timedelta
+import os
+import traceback
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db.models import Sum, Count, Q, F
@@ -16,8 +17,9 @@ from rest_framework.response import Response
 from .models import Budget, Category, Transaction, SavingsGoal
 from .serializers import BudgetSerializer, CategorySerializer, TransactionSerializer, SavingsGoalSerializer
 
-# Konfigurasi Groq dengan API Key
-client = Groq(api_key="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")
+# Konfigurasi Groq dengan API Key dari environment
+_groq_api_key = os.environ.get("GROQ_API_KEY", "")
+client = Groq(api_key=_groq_api_key)
 
 # Model selection dengan fallback
 VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"  # Replacement for deprecated llama-3.2-11b-vision-preview
@@ -350,17 +352,25 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 user=user, name=category_hint, type=type_
             )
 
-            # 2. Simpan Transaksi
+            # 2. Parse tanggal dari string "YYYY-MM-DD" → datetime (DateTimeField)
+            date_str = extracted_data.get("date", current_date)
+            try:
+                naive_dt = datetime.strptime(date_str, "%Y-%m-%d")
+                txn_date = timezone.make_aware(naive_dt)
+            except (ValueError, TypeError):
+                txn_date = timezone.localtime()  # fallback ke sekarang
+
+            # 3. Simpan Transaksi
             txn = Transaction.objects.create(
                 user=user,
                 category=category,
                 amount=extracted_data.get("amount", 0),
                 description=extracted_data.get("description", ""),
-                transaction_date=extracted_data.get("date", current_date),
-                input_source="ai_voice",  # Bisa diganti ke tipe input teks
+                transaction_date=txn_date,
+                input_source="ai_voice",
             )
 
-            # 3. Serialize data untuk kembalian Flutter
+            # 4. Serialize data untuk kembalian Flutter
             from .serializers import TransactionSerializer
 
             serializer = TransactionSerializer(txn)
@@ -375,12 +385,14 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED,
             )
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             return Response(
-                {"error": "Gagal membaca format JSON dari AI. Coba ubah pesan kamu."},
+                {"error": f"Gagal membaca format JSON dari AI: {str(e)}. Coba ubah pesan kamu."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         except Exception as e:
+            error_detail = traceback.format_exc()
+            print(f"[chat_input ERROR] {str(e)}\n{error_detail}")
             return Response(
                 {"error": f"Terjadi kesalahan: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
