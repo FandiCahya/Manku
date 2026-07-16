@@ -4,6 +4,7 @@ import os
 import traceback
 from datetime import datetime, timedelta
 from decimal import Decimal
+from io import BytesIO
 
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
