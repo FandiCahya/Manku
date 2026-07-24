@@ -12,15 +12,35 @@ const bodyParser = require('body-parser');
 const app = express();
 app.use(bodyParser.json());
 
+const path = require('path');
+// Load environment variables from root .env file
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+// Puppeteer configuration that automatically adapts to Windows/Linux VPS environment
+const puppeteerOptions = {
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+};
+
+if (process.platform === 'linux') {
+    puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
+    puppeteerOptions.args.push(
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+    );
+}
+
 // Initialize WhatsApp client
 const client = new Client({
     authStrategy: new LocalAuth({
         clientId: 'manku-bot'
     }),
-    puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+    authTimeoutMs: 120000,
+    puppeteer: puppeteerOptions
 });
 
 // Store message handler callback

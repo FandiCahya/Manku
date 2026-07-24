@@ -19,10 +19,9 @@ COMMAND_PREFIX = '/manku'  # Perintah harus diawali dengan ini
 ALTERNATIVE_PREFIX = '!m'   # Alternatif prefix yang lebih pendek
 
 # Allowed Phone Numbers (Whitelist)
-# Format: 628xxx (tanpa +, tanpa spasi)
+# Format: 628xxx (tanpa +, tanpa spasi) - loaded from ALLOWED_PHONE_NUMBERS env variable
 ALLOWED_PHONE_NUMBERS = [
-    '628123456789',  # Ganti dengan nomor Anda
-    # Tambahkan nomor lain di sini
+    num.strip() for num in os.getenv('ALLOWED_PHONE_NUMBERS', '628123456789').split(',') if num.strip()
 ]
 
 # Backend Configuration

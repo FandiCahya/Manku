@@ -6,16 +6,28 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 
-from .bot_config import (
-    is_phone_allowed, 
-    has_valid_prefix, 
-    remove_prefix,
-    RATE_LIMIT_PER_MINUTE
-)
-from .ai_parser import AIParser
-from .backend_integration import BackendAPI
-from .bot_commands import BotCommands
-from .whatsapp_client import get_whatsapp_client
+try:
+    from .bot_config import (
+        is_phone_allowed, 
+        has_valid_prefix, 
+        remove_prefix,
+        RATE_LIMIT_PER_MINUTE
+    )
+    from .ai_parser import AIParser
+    from .backend_integration import BackendAPI
+    from .bot_commands import BotCommands
+    from .whatsapp_client import get_whatsapp_client
+except ImportError:
+    from bot_config import (
+        is_phone_allowed, 
+        has_valid_prefix, 
+        remove_prefix,
+        RATE_LIMIT_PER_MINUTE
+    )
+    from ai_parser import AIParser
+    from backend_integration import BackendAPI
+    from bot_commands import BotCommands
+    from whatsapp_client import get_whatsapp_client
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,10 @@ from typing import Dict, Any, Optional
 from groq import Groq
 from datetime import datetime
 
-from .bot_config import GROQ_API_KEY, AI_MODEL
+try:
+    from .bot_config import GROQ_API_KEY, AI_MODEL
+except ImportError:
+    from bot_config import GROQ_API_KEY, AI_MODEL
 
 logger = logging.getLogger(__name__)
 

@@ -11,6 +11,9 @@ from .views import (
     WhatsAppUserLookupView,
     google_test_page,
     google_token_callback,
+    ProfileUpdateView,
+    ChangePasswordView,
+    Toggle2FAView,
 )
 
 urlpatterns = [
@@ -27,4 +30,8 @@ urlpatterns = [
     path("google-token-callback/", google_token_callback, name="google-token-callback"),
     # WhatsApp Bot - User lookup by phone number
     path("whatsapp-user/<str:phone_number>/", WhatsAppUserLookupView.as_view(), name="whatsapp-user-lookup"),
+    # Account Settings
+    path("profile/", ProfileUpdateView.as_view(), name="profile-update"),
+    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
+    path("toggle-2fa/", Toggle2FAView.as_view(), name="toggle-2fa"),
 ]

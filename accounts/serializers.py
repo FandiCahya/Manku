@@ -135,3 +135,43 @@ class ResendOTPSerializer(serializers.Serializer):
             "invalid": "Format email tidak valid.",
         }
     )
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """Serializer untuk mengupdate profile user"""
+    first_name = serializers.CharField(required=True, max_length=150)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'email')
+
+    def validate_email(self, value):
+        # Ensure email is unique except for the current user
+        user = self.context['request'].user
+        if User.objects.filter(email=value).exclude(id=user.id).exists():
+            raise serializers.ValidationError("Email ini sudah digunakan oleh akun lain.")
+        return value
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Serializer untuk mengubah password"""
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(
+        required=True, 
+        min_length=8,
+        error_messages={
+            "min_length": "Password baru minimal 8 karakter.",
+        }
+    )
+    confirm_password = serializers.CharField(required=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Password baru dan konfirmasi password tidak sama."})
+        return data
+
+
+class Toggle2FASerializer(serializers.Serializer):
+    """Serializer untuk toggle 2FA"""
+    is_2fa_enabled = serializers.BooleanField(required=True)

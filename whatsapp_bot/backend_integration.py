@@ -7,7 +7,10 @@ import requests
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from .bot_config import BACKEND_API_URL
+try:
+    from .bot_config import BACKEND_API_URL
+except ImportError:
+    from bot_config import BACKEND_API_URL
 
 logger = logging.getLogger(__name__)
 

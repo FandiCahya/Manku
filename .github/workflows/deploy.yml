@@ -1,0 +1,55 @@
+name: Deploy Backend to Oracle VPS
+
+on:
+  push:
+    branches:
+      - Backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Oracle VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "🚀 Starting Deployment on VPS..."
+            cd /var/www/Manku
+            
+            # Fetch and hard reset tracked files to match the remote branch exactly
+            echo "🔄 Pulling latest changes from GitHub..."
+            git fetch origin Backend
+            git reset --hard origin/Backend
+            
+            # Activate Virtual Environment & Install requirements
+            echo "📦 Installing Python dependencies..."
+            source venv/bin/activate
+            pip install -r requirements.txt
+            
+            # Install Node.js dependencies for WhatsApp Bot
+            echo "📦 Installing Node.js dependencies..."
+            cd whatsapp_bot
+            npm install
+            cd ..
+            
+            # Run Migrations
+            echo "⚙️ Running database migrations..."
+            source venv/bin/activate
+            python manage.py migrate
+            
+            # Restart Services
+            echo "🔄 Restarting Django Web Server (Gunicorn)..."
+            sudo systemctl restart gunicorn
+            
+            # Restart WhatsApp Bot Services (if they are enabled)
+            echo "🔄 Restarting WhatsApp Bot Services..."
+            sudo systemctl restart manku-whatsapp-node manku-whatsapp-python || true
+            
+            echo "✅ Deployment completed successfully!"

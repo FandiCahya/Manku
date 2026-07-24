@@ -9,11 +9,12 @@ from google.oauth2 import id_token
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 # pyrefly: ignore [missing-import]
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import OTPVerification, PasswordResetToken
+from .models import OTPVerification, PasswordResetToken, UserProfile
 from .serializers import (
     GoogleLoginSerializer,
     LoginSerializer,
@@ -22,6 +23,9 @@ from .serializers import (
     RequestPasswordResetSerializer,
     ResetPasswordSerializer,
     ResendOTPSerializer,
+    ProfileUpdateSerializer,
+    ChangePasswordSerializer,
+    Toggle2FASerializer,
 )
 from .email_templates import (
     get_otp_email_template,
@@ -558,3 +562,78 @@ class WhatsAppUserLookupView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ACCOUNT SETTINGS ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ProfileUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Ambil data profil user beserta status 2FA."""
+        user = request.user
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        return Response({
+            "first_name": user.first_name,
+            "email": user.email,
+            "is_2fa_enabled": profile.is_2fa_enabled,
+        }, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        user = request.user
+        serializer = ProfileUpdateSerializer(user, data=request.data, context={'request': request}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "success": True,
+                "message": "Profil berhasil diperbarui.",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        serializer = ChangePasswordSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            if not user.check_password(serializer.validated_data['current_password']):
+                return Response({
+                    "current_password": ["Password lama salah."]
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            return Response({
+                "success": True,
+                "message": "Password berhasil diubah."
+            }, status=status.HTTP_200_OK)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class Toggle2FAView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        serializer = Toggle2FASerializer(data=request.data)
+        
+        if serializer.is_valid():
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            profile.is_2fa_enabled = serializer.validated_data['is_2fa_enabled']
+            profile.save()
+            
+            status_text = "diaktifkan" if profile.is_2fa_enabled else "dinonaktifkan"
+            return Response({
+                "success": True,
+                "message": f"Two-Factor Authentication (2FA) berhasil {status_text}.",
+                "is_2fa_enabled": profile.is_2fa_enabled
+            }, status=status.HTTP_200_OK)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
