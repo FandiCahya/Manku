@@ -28,6 +28,8 @@ class TransactionRepository {
       amount: double.tryParse(amount.replaceAll(RegExp('[^0-9.]'), '')) ?? 0.0,
       categoryName: categoryHint,
       description: description,
+      date: date,
+      time: time,
       categoryType: type,
       inputSource: 'manual',
     );

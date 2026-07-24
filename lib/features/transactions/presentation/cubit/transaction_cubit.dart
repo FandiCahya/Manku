@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/transaction_repository.dart';
@@ -141,16 +142,22 @@ class TransactionCubit extends Cubit<TransactionState> {
 
   Future<ChatTransactionResponse?> addChatTransaction(String text) async {
     // For chat transactions, we might want to return the extracted response so the UI can print it in the chat bubble.
-    emit(TransactionSubmitting());
     try {
       final response = await TransactionRepository.saveChatTransaction(text);
       emit(const TransactionSubmitSuccess(message: 'Transaksi berhasil disimpan dari Chat!'));
       // Reload history in background
-      await fetchTransactionsAndReport();
+      unawaited(fetchTransactionsAndReport()); // tidak di-await agar chat tidak tertunda
       return response;
     } catch (e) {
+      debugPrint('TransactionCubit Error (chat): $e');
+      // Kembalikan state yang sebelumnya agar UI tidak crash
+      final currentState = state;
       emit(TransactionError(error: e.toString().replaceFirst('Exception: ', '')));
-      return null;
+      if (currentState is TransactionLoaded) {
+        emit(currentState);
+      }
+      // Rethrow agar widget dapat menampilkan pesan error yang spesifik
+      rethrow;
     }
   }
 

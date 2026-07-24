@@ -29,7 +29,17 @@ class ApiClient {
         onRequest: (options, handler) async {
           options.baseUrl = ApiConfig.baseUrl;
 
-          if (!options.path.contains('/auth/')) {
+          // Hanya endpoint publik (login/register/OTP) yang tidak perlu token.
+          // Endpoint profile, change-password, toggle-2fa tetap butuh token.
+          const publicPaths = [
+            '/auth/login/',
+            '/auth/register/',
+            '/auth/verify-otp/',
+            '/auth/google-login/',
+            '/auth/token/refresh/',
+          ];
+          final isPublic = publicPaths.any((p) => options.path.contains(p));
+          if (!isPublic) {
             final prefs = await SharedPreferences.getInstance();
             final token = prefs.getString('access_token');
             if (token != null) {
@@ -39,8 +49,17 @@ class ApiClient {
           return handler.next(options);
         },
         onError: (DioException error, handler) async {
-          if (error.response?.statusCode == 401 &&
-              !error.requestOptions.path.contains('/auth/')) {
+          const publicPaths = [
+            '/auth/login/',
+            '/auth/register/',
+            '/auth/verify-otp/',
+            '/auth/google-login/',
+            '/auth/token/refresh/',
+          ];
+          final isPublicPath = publicPaths.any(
+            (p) => error.requestOptions.path.contains(p),
+          );
+          if (error.response?.statusCode == 401 && !isPublicPath) {
             final prefs = await SharedPreferences.getInstance();
             final refreshToken = prefs.getString('refresh_token');
 

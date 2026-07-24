@@ -1,8 +1,10 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/animated_widgets.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 import '../../../../models/transaction_api.dart';
 import '../../../../widgets/assistant_section.dart';
 import '../../../../widgets/search_bar_section.dart';
@@ -29,30 +31,18 @@ class _HistoryTabState extends State<HistoryTab> {
     return BlocConsumer<TransactionCubit, TransactionState>(
       listener: (context, state) {
         if (state is TransactionSubmitSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Text(state.message),
-                ],
-              ),
-              backgroundColor: context.colors.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+          AppDialogs.showToast(
+            context,
+            message: state.message,
           );
           // Refresh dashboard & savings so home page stats stay up-to-date
           context.read<DashboardCubit>().fetchSummary();
           context.read<SavingsCubit>().fetchSavingsData();
         } else if (state is TransactionError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.error),
-              backgroundColor: context.colors.error,
-              behavior: SnackBarBehavior.floating,
-            ),
+          AppDialogs.showToast(
+            context,
+            message: state.error,
+            isSuccess: false,
           );
         }
       },
@@ -60,10 +50,8 @@ class _HistoryTabState extends State<HistoryTab> {
         final isLoading = state is TransactionLoading || state is TransactionInitial || state is TransactionSubmitting;
         final error = state is TransactionError ? state.error : null;
 
-        int totalTxns = 0;
         List<TransactionGroup> filteredGroups = [];
         if (state is TransactionLoaded) {
-          totalTxns = state.history.totalTransactions;
           
           if (_selectedFilter == 'All') {
             filteredGroups = state.filteredGroups;
@@ -142,7 +130,7 @@ class _HistoryTabState extends State<HistoryTab> {
                                       });
                                     }
                                   },
-                                  selectedColor: context.colors.primary.withOpacity(0.2),
+                                  selectedColor: context.colors.primary.withValues(alpha: 0.2),
                                   labelStyle: TextStyle(
                                     color: isSelected ? context.colors.primary : context.colors.onSurfaceVariant,
                                   ),
@@ -289,28 +277,7 @@ class TransactionItemWidget extends StatelessWidget {
     return Icons.category;
   }
 
-  static const List<Color> _bgPalette = [
-    Color(0xFFfce4ec),
-    Color(0xFFe3f2fd),
-    Color(0xFFe8f5e9),
-    Color(0xFFfff8e1),
-    Color(0xFFede7f6),
-    Color(0xFFfbe9e7),
-  ];
-  static const List<Color> _iconPalette = [
-    Color(0xFFe91e63),
-    Color(0xFF1e88e5),
-    Color(0xFF43a047),
-    Color(0xFFffa000),
-    Color(0xFF7b1fa2),
-    Color(0xFFe64a19),
-  ];
 
-  Color _bgColorForCategory(String name) =>
-      _bgPalette[name.hashCode.abs() % _bgPalette.length];
-
-  Color _iconColorForCategory(String name) =>
-      _iconPalette[name.hashCode.abs() % _iconPalette.length];
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +286,7 @@ class TransactionItemWidget extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Gamified colors
-    final bgColor = isIncome ? context.colors.mint.withOpacity(0.15) : context.colors.coral.withOpacity(0.15);
+    final bgColor = isIncome ? context.colors.mint.withValues(alpha: 0.15) : context.colors.coral.withValues(alpha: 0.15);
     final iconColor = isIncome ? context.colors.mint : context.colors.coral;
 
     return Container(
@@ -330,7 +297,7 @@ class TransactionItemWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -399,38 +366,33 @@ class TransactionItemWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(width: 8),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
-            onSelected: (value) {
-              if (value == 'edit') {
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () async {
+              final action = await AppDialogs.showActionSheet(context);
+              if (!context.mounted) return;
+              if (action == 'edit') {
                 _showEditSheet(context);
-              } else if (value == 'delete') {
-                _confirmDelete(context);
+              } else if (action == 'delete') {
+                unawaited(_confirmDelete(context));
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 18),
-                    SizedBox(width: 8),
-                    Text('Edit'),
-                  ],
-                ),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 18, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Hapus', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
+              child: Icon(
+                Icons.more_horiz_rounded,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white54
+                    : Colors.grey.shade500,
+                size: 20,
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -440,7 +402,7 @@ class TransactionItemWidget extends StatelessWidget {
   void _showEditSheet(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    showModalBottomSheet(
+    unawaited(showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -462,35 +424,18 @@ class TransactionItemWidget extends StatelessWidget {
           ),
         );
       },
-    );
+    ));
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Transaksi?'),
-        content: const Text('Transaksi ini akan dihapus permanen.'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<TransactionCubit>().deleteTransaction(txn.id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await AppDialogs.confirmDelete(
+      context,
+      title: 'Hapus Transaksi?',
+      message: 'Transaksi "${txn.description}" akan dihapus secara permanen dan tidak bisa dipulihkan.',
     );
+    if ((confirmed ?? false) && context.mounted) {
+      unawaited(context.read<TransactionCubit>().deleteTransaction(txn.id));
+    }
   }
 }
 

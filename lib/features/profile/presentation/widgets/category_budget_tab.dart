@@ -1,6 +1,8 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/colors.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 import '../../../../features/savings/domain/budget_models.dart';
 import '../../../savings/presentation/cubit/savings_cubit.dart';
 import '../../../savings/presentation/cubit/savings_state.dart';
@@ -551,33 +553,15 @@ class _BudgetCardItem extends StatelessWidget {
     CategoryBudgetTab._showSetBudgetDialog(context, bd, existing: item);
   }
 
-  void _confirmDeleteBudget(BuildContext context) {
-    showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Budget?'),
-        content: Text('Budget "${item.categoryName}" akan dihapus.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    ).then((ok) {
-      if ((ok ?? false) && context.mounted) {
-        context.read<SavingsCubit>().deleteCategoryBudget(item.id);
-      }
-    });
+  Future<void> _confirmDeleteBudget(BuildContext context) async {
+    final confirmed = await AppDialogs.confirmDelete(
+      context,
+      title: 'Hapus Budget?',
+      message: 'Budget "${item.categoryName}" akan dihapus secara permanen.',
+    );
+    if ((confirmed ?? false) && context.mounted) {
+      unawaited(context.read<SavingsCubit>().deleteCategoryBudget(item.id));
+    }
   }
 }
 

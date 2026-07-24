@@ -1,6 +1,8 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/colors.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 import '../cubit/investment_cubit.dart';
 import '../cubit/investment_state.dart';
 import '../widgets/add_investment_sheet.dart';
@@ -15,7 +17,7 @@ class InvestmentTab extends StatelessWidget {
 
   Future<void> _openEditSheet(BuildContext context, Investment investment) async {
     final cubit = context.read<InvestmentCubit>();
-    await showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -24,83 +26,32 @@ class InvestmentTab extends StatelessWidget {
         child: EditInvestmentSheet(investment: investment),
       ),
     );
-    cubit.loadInvestments();
-    context.read<DashboardCubit>().fetchSummary();
+    unawaited(cubit.loadInvestments());
+    unawaited(context.read<DashboardCubit>().fetchSummary());
   }
 
   Future<void> _confirmDelete(BuildContext context, Investment investment) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1D3448) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.red, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Text('Hapus Investment',
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87)),
-          ],
-        ),
-        content: RichText(
-          text: TextSpan(
-            style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.white70 : Colors.black54),
-            children: [
-              const TextSpan(text: 'Yakin hapus '),
-              TextSpan(
-                text: '${investment.symbol} (${investment.name})',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const TextSpan(text: ' dari portofolio?\nData tidak bisa dipulihkan.'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal',
-                style: TextStyle(color: context.colors.onSurfaceVariant)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Hapus',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialogs.confirmDelete(
+      context,
+      title: 'Hapus Investment?',
+      message: 'Yakin hapus ${investment.symbol} (${investment.name}) dari portofolio?\nData tidak bisa dipulihkan.',
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       await context.read<InvestmentCubit>().deleteInvestment(investment.id);
       if (context.mounted) {
-        context.read<DashboardCubit>().fetchSummary();
+        AppDialogs.showToast(
+          context,
+          message: '${investment.symbol} berhasil dihapus dari portofolio',
+        );
+        unawaited(context.read<DashboardCubit>().fetchSummary());
       }
     }
   }
 
   Future<void> _openAddSheet(BuildContext context) async {
     final cubit = context.read<InvestmentCubit>();
-    await showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -110,8 +61,8 @@ class InvestmentTab extends StatelessWidget {
       ),
     );
     // Refresh paksa setelah sheet ditutup
-    cubit.loadInvestments();
-    context.read<DashboardCubit>().fetchSummary();
+    unawaited(cubit.loadInvestments());
+    unawaited(context.read<DashboardCubit>().fetchSummary());
   }
 
   @override
@@ -282,5 +233,3 @@ class InvestmentTab extends StatelessWidget {
     );
   }
 }
-
-

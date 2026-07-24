@@ -1,8 +1,10 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_manage/core/constants/colors.dart';
 import 'package:my_manage/core/localization/app_localizations.dart';
 import 'package:my_manage/core/widgets/animated_widgets.dart';
+import 'package:my_manage/core/widgets/app_dialogs.dart';
 import 'package:my_manage/features/savings/domain/budget_models.dart';
 import 'package:my_manage/features/savings/presentation/cubit/savings_cubit.dart';
 import 'package:my_manage/features/savings/presentation/cubit/savings_state.dart';
@@ -248,10 +250,10 @@ class _LoadedView extends StatelessWidget {
             ),
           ),
           if (data.budgets.isEmpty)
-            SliverToBoxAdapter(
+            const SliverToBoxAdapter(
               child: ScaleIn(
-                delay: const Duration(milliseconds: 400),
-                child: const _EmptyBudgetView(),
+                delay: Duration(milliseconds: 400),
+                child: _EmptyBudgetView(),
               ),
             )
           else
@@ -323,33 +325,15 @@ class _LoadedView extends StatelessWidget {
   ) async {
     final l10n = AppLocalizations.of(context);
     
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l10n.translate('delete_goal')),
-        content: Text(
-          l10n.translate('goal_will_be_deleted').replaceAll('{name}', item.categoryName),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.translate('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(l10n.translate('delete')),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialogs.confirmDelete(
+      context,
+      title: l10n.translate('delete_goal'),
+      message: l10n.translate('goal_will_be_deleted').replaceAll('{name}', item.categoryName),
+      confirmLabel: l10n.translate('delete'),
+      cancelLabel: l10n.translate('cancel'),
     );
     if ((confirmed ?? false) && context.mounted) {
-      context.read<SavingsCubit>().deleteCategoryBudget(item.id);
+      unawaited(context.read<SavingsCubit>().deleteCategoryBudget(item.id));
     }
   }
 }

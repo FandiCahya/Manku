@@ -5,6 +5,7 @@ import '../core/constants/colors.dart';
 import '../models/budget_goal.dart';
 import '../services/savings_service.dart';
 import 'login_page.dart';
+import 'about_page.dart';
 
 class ProfilePage extends StatefulWidget {
   ProfilePage({Key? key}) : super(key: key);
@@ -474,7 +475,10 @@ class _ProfilePageState extends State<ProfilePage>
           }),
           SizedBox(height: 10),
           _settingItem('Tentang Aplikasi', Icons.info_outline, Colors.teal, () {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ManKu v1.0.0')));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AboutPage()),
+            );
           }),
           SizedBox(height: 32),
           // Logout button

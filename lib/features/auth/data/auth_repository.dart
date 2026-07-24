@@ -220,4 +220,77 @@ class AuthRepository {
       '$fallbackMessage (${error.response?.statusCode ?? 'Koneksi error'})',
     );
   }
+  static Future<Map<String, dynamic>> updateProfile({
+    required String firstName,
+    required String email,
+  }) async {
+    try {
+      final response = await ApiClient.dio.put<Map<String, dynamic>>(
+        ApiConfig.profileUpdateEndpoint,
+        data: {'first_name': firstName, 'email': email},
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        // Update stored user details if needed
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_name', firstName);
+        await prefs.setString('user_email', email);
+        return response.data!;
+      }
+      throw Exception('Update profil gagal');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Update profil gagal');
+    }
+  }
+
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await ApiClient.dio.post<Map<String, dynamic>>(
+        ApiConfig.changePasswordEndpoint,
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+          'confirm_password': confirmPassword,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data!;
+      }
+      throw Exception('Ganti password gagal');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Ganti password gagal');
+    }
+  }
+
+  static Future<Map<String, dynamic>> toggle2FA(bool isEnabled) async {
+    try {
+      final response = await ApiClient.dio.post<Map<String, dynamic>>(
+        ApiConfig.toggle2FAEndpoint,
+        data: {'is_2fa_enabled': isEnabled},
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data!;
+      }
+      throw Exception('Toggle 2FA gagal');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Toggle 2FA gagal');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getProfile() async {
+    try {
+      final response = await ApiClient.dio.get<Map<String, dynamic>>(
+        ApiConfig.profileUpdateEndpoint,
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data!;
+      }
+      throw Exception('Gagal mengambil profil');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Gagal mengambil profil');
+    }
+  }
 }

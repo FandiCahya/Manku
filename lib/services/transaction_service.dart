@@ -19,10 +19,12 @@ class TransactionService {
     required String categoryType,
     required String categoryName,
     required String inputSource,
+    String? date,
+    String? time,
   }) async {
     final now = DateTime.now();
-    final dateStr = DateFormat('yyyy-MM-dd').format(now);
-    final timeStr = DateFormat('HH:mm').format(now);
+    final dateStr = date ?? DateFormat('yyyy-MM-dd').format(now);
+    final timeStr = time ?? DateFormat('HH:mm').format(now);
 
     if (kIsWeb) {
       // Web: langsung ke API
@@ -760,24 +762,59 @@ class TransactionService {
     String text,
   ) async {
     try {
+      debugLog('🤖 ChatAI: Mengirim teks: "$text"');
+      debugLog('🤖 ChatAI: Endpoint → ${ApiConfig.saveChatTransactionEndpoint}');
+
       final response = await ApiClient.dio.post<Map<String, dynamic>>(
         ApiConfig.saveChatTransactionEndpoint,
         data: {'text': text},
       );
 
+      debugLog('🤖 ChatAI: Status HTTP → ${response.statusCode}');
+      debugLog('🤖 ChatAI: Response data → ${response.data}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         if (data == null) {
-          throw Exception('Response data is null');
+          throw Exception('Response data kosong dari server');
         }
-        return ChatTransactionResponse.fromJson(data);
+        final result = ChatTransactionResponse.fromJson(data);
+        debugLog('🤖 ChatAI: Parsed → amount=${result.extractedData?.amount}, desc=${result.extractedData?.description}, type=${result.extractedData?.type}');
+        return result;
       } else {
         throw Exception(
-          'Failed to save chat transaction: ${response.statusCode}',
+          'Server menolak permintaan: HTTP ${response.statusCode}',
         );
       }
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final responseBody = e.response?.data?.toString() ?? '-';
+      debugPrint('🤖 ChatAI DioException: type=${e.type} status=$statusCode body=$responseBody');
+      debugLog('🤖 ChatAI ERROR: status=$statusCode | body=$responseBody');
+
+      if (statusCode == 401) {
+        throw Exception('Sesi login habis. Silakan login ulang.');
+      } else if (statusCode == 400) {
+        throw Exception('Data tidak valid: $responseBody');
+      } else if (statusCode == 500) {
+        String serverError = 'Server bermasalah (500). Coba beberapa saat lagi.';
+        if (e.response?.data is Map) {
+          final errMap = e.response?.data as Map<String, dynamic>;
+          if (errMap.containsKey('error')) {
+            serverError = errMap['error'].toString();
+          }
+        }
+        throw Exception(serverError);
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Koneksi timeout. Periksa jaringan internet Anda.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception('Tidak bisa terhubung ke server. Periksa koneksi internet.');
+      } else {
+        throw Exception('Gagal menghubungi server: ${e.message}');
+      }
     } catch (e) {
-      debugPrint('saveChatTransaction error: $e');
+      debugPrint('🤖 ChatAI error tidak terduga: $e');
       rethrow;
     }
   }

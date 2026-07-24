@@ -13,6 +13,11 @@ class ApiConfig {
   static String get loginEndpoint => '$baseUrl/api/auth/login/';
   static String get googleLoginEndpoint => '$baseUrl/api/auth/google-login/';
 
+  // ── Account Settings ──────────────────────────────────────────────────────
+  static String get profileUpdateEndpoint => '$baseUrl/api/auth/profile/';
+  static String get changePasswordEndpoint => '$baseUrl/api/auth/change-password/';
+  static String get toggle2FAEndpoint => '$baseUrl/api/auth/toggle-2fa/';
+
   // ── Transactions ──────────────────────────────────────────────────────────
   static String get saveTransactionEndpoint =>
       '$baseUrl/api/transactions/save-transaction/';

@@ -152,14 +152,22 @@ class _TransactionInputFormState extends State<TransactionInputForm>
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final datePickerScheme = isDark
+            ? ColorScheme.dark(
+                primary: context.colors.primary,
+                onPrimary: context.colors.onPrimary,
+                surface: context.colors.surfaceContainerLowest,
+                onSurface: context.colors.onSurface,
+              )
+            : ColorScheme.light(
+                primary: context.colors.primary,
+                onPrimary: context.colors.onPrimary,
+                surface: context.colors.surfaceContainerLowest,
+                onSurface: context.colors.onSurface,
+              );
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: context.colors.primary,
-              onPrimary: context.colors.onPrimary,
-              surface: context.colors.surfaceContainerLowest,
-            ),
-          ),
+          data: Theme.of(context).copyWith(colorScheme: datePickerScheme),
           child: child!,
         );
       },

@@ -357,9 +357,13 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
               }
             }
 
+            final typeLabel = (extracted.type ?? 'expense').toLowerCase() == 'income'
+                ? '📈 Pemasukan'
+                : '📉 Pengeluaran';
+
             final parsed = {
               'amount': extracted.amount!.toStringAsFixed(0),
-              'category': extracted.categoryHint ?? 'Other',
+              'category': extracted.categoryHint ?? 'Lainnya',
               'description': extracted.description ?? '',
               'type': extracted.type ?? 'expense',
             };
@@ -367,7 +371,7 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             messages.add(
               ChatMessage(
                 text:
-                    '✅ Tersimpan!\n💰 Rp${parsed['amount']} | ${parsed['category']}\n📝 ${parsed['description']}\n⏰ $timeStr • $dateStr',
+                    '✅ Tersimpan!\n💰 Rp${parsed['amount']} | ${parsed['category']}\n$typeLabel\n📝 ${parsed['description']}\n⏰ $timeStr • $dateStr',
                 isUser: false,
                 timestamp: now,
                 isParsed: true,
@@ -375,11 +379,20 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
             );
             // Notify parent to refresh data
             widget.onTransactionSaved?.call();
+          } else if (data.message != null && data.message!.isNotEmpty) {
+            // Backend punya pesan tapi tidak ada data transaksi (misal pertanyaan, dsb.)
+            messages.add(
+              ChatMessage(
+                text: data.message!,
+                isUser: false,
+                timestamp: DateTime.now(),
+              ),
+            );
           } else {
             messages.add(
               ChatMessage(
                 text:
-                    'Maaf, saya tidak menemukan nominal. Coba seperti ini:\n"Saya beli kopi 25000"',
+                    'Maaf, saya tidak dapat menemukan nominal transaksi.\nCoba tulis seperti ini:\n• "Beli kopi 25000"\n• "Terima gaji 3000000"\n• "Bayar listrik 150000"',
                 isUser: false,
                 timestamp: DateTime.now(),
               ),
@@ -388,27 +401,33 @@ class _ChatTransactionInputState extends State<ChatTransactionInput> {
           _saveChatHistory();
         });
       } else {
-        setState(() {
-          isLoading = false;
-          messages.add(
-            ChatMessage(
-              text:
-                  'Maaf, terjadi kesalahan pada server atau data tidak valid.',
-              isUser: false,
-              timestamp: DateTime.now(),
-            ),
-          );
-          _saveChatHistory();
-        });
+        // data null berarti cubit menangkap exception dari service
+        // Pesan error sudah ditampilkan melalui TransactionError state,
+        // tapi kita tetap update chat bubble agar user tahu
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+            messages.add(
+              ChatMessage(
+                text:
+                    'Terjadi kesalahan. Silakan coba lagi atau periksa koneksi internet.',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ),
+            );
+            _saveChatHistory();
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
+      // Pesan error sudah dispesifikkan di TransactionService berdasarkan jenis error
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
       setState(() {
         isLoading = false;
         messages.add(
           ChatMessage(
-            text:
-                'Maaf, gagal terhubung ke server.\nPastikan server sudah berjalan.\nError: ${e.toString()}',
+            text: '❌ $errorMessage',
             isUser: false,
             timestamp: DateTime.now(),
           ),

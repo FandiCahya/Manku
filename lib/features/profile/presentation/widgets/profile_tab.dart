@@ -5,6 +5,8 @@ import '../../../../core/constants/colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/language_provider.dart';
 import '../../../theme/presentation/cubit/theme_cubit.dart';
+import '../../../../pages/about_page.dart';
+import '../pages/account_settings_page.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({
@@ -46,8 +48,9 @@ class _ProfileTabState extends State<ProfileTab> {
             icon: Icons.security,
             color: context.colors.primary,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.translate('account_settings'))),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AccountSettingsPage()),
               );
             },
           ),
@@ -82,8 +85,9 @@ class _ProfileTabState extends State<ProfileTab> {
             icon: Icons.info_outline,
             color: Colors.teal,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('ManKu v1.0.0')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AboutPage()),
               );
             },
           ),
